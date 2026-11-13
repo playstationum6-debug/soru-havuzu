@@ -771,8 +771,10 @@ function finish(k){
   const last=T.i===T.ids.length-1,days=IV[R.box];
   const ce=q.cozum||'',cl=q.cl;
   const exp=ce?`${q.tip==='img'?`<p class="lab" style="margin:0">Zekanın çözümü${cl!=null&&cl!==q.ans?` · zeka ${LET[cl]} buldu`:''}</p>`:''}<p>${esc(ce)}</p>`:q.solve==='pending'?'<p>Bu sorunun çözümü hazırlanıyor, sonraki sefer görünecek.</p>':'';
+  const aiNote=q.src==='ai'&&(PR.q[q.id]||{}).ans===undefined?`<p style="font-size:13px;font-weight:700;margin:0">Bu sorunun cevabını zeka buldu, yanlış olabilir. <button class="btn ghost sm" id="fixA">Cevabı düzelt</button></p>`:'';
   const nt=q.not||q.note?`<div class="stick"><small>Notun</small>${esc(q.not||q.note)}</div>`:'';
-  $('#abar').insertAdjacentHTML('afterbegin',`<div class="fb ${R.blank?'blank':R.ok?'ok':'bad'}"><h3>${R.blank?'Boş bıraktın · cevap '+LET[q.ans]:R.ok?(T.streak>=3?`Doğru! ${T.streak} seri`:'Doğru!'):'Yanlış · cevap '+LET[q.ans]}</h3>${exp}${nt}<p style="font-size:13px;color:var(--mute)">Bu soru ${days} gün sonra tekrar gelecek.</p></div>`);
+  $('#abar').insertAdjacentHTML('afterbegin',`<div class="fb ${R.blank?'blank':R.ok?'ok':'bad'}"><h3>${R.blank?'Boş bıraktın · cevap '+LET[q.ans]:R.ok?(T.streak>=3?`Doğru! ${T.streak} seri`:'Doğru!'):'Yanlış · cevap '+LET[q.ans]}</h3>${exp}${nt}${aiNote}<p style="font-size:13px;color:var(--mute)">Bu soru ${days} gün sonra tekrar gelecek.</p></div>`);
+  if($('#fixA'))$('#fixA').onclick=()=>sheet(`<h3>Doğru cevap hangisi?</h3><div class="ansrow">${[...LET].map((l,i)=>`<button class="chip" data-a="${i}" aria-pressed="${q.ans===i}">${l}</button>`).join('')}<span></span></div>`,(el,close)=>el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{setP(q.id,{ans:+b.dataset.a});close();toast('Cevap kaydedildi.')}));
   const ab=$('.abtns');ab.innerHTML=`<button class="btn" id="nx" style="grid-column:1/-1">${last?'Sonucu gör':'Sonraki soru'} ▸</button>`;ab.style.gridTemplateColumns='1fr';
   $('#nx').onclick=()=>{if(last)result();else{T.i++;T.usedHint=false;openQ()}};
   checkBadges({cozdu:true,maxSeri:T.maxSeri});
