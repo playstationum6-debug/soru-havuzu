@@ -11,7 +11,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Manrope:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Manrope:wght@500;700;800&family=Caveat:wght@600;700&display=swap">
 <style>
 html,body{margin:0}[hidden]{display:none!important}img{max-width:100%}
 /* Layout: telefon/tablet uygulaması — mavi zemin, mürekkep çerçeveli kartlar; çözüm ekranı tam ekran: üst çubuk, kalem çubuğu, yakınlaştırılabilir sayfa, şık çubuğu */
@@ -21,6 +21,7 @@ html,body{margin:0}[hidden]{display:none!important}img{max-width:100%}
   --on-bg:#F7F8FF; --on-bg-mute:#C9D1FF; --stage:#0B1147; --paper:#FFFFFF; --grid:#E8EBFB;
   --display:'Bricolage Grotesque','Arial Black',system-ui,sans-serif;
   --body:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --hand:'Caveat','Comic Sans MS',cursive;
   color-scheme:light;
 }
 *{box-sizing:border-box}
@@ -293,6 +294,44 @@ table.ft{width:100%;border-collapse:collapse;font-size:13px}
 .screen.back{animation:inl .35s cubic-bezier(.2,.9,.3,1.1) both}
 @keyframes inl{from{opacity:0;transform:translateX(-24px)}}
 
+
+/* ---------- anlatım oynatıcısı ---------- */
+.pl{position:fixed;inset:0;z-index:25;background:var(--bg);display:flex;flex-direction:column;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);animation:fade .25s both;overflow:auto}
+.pl .fbar b{flex:1;font:800 18px var(--display);color:var(--on-bg);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plc{margin:0 14px;background:var(--card);border:2px solid var(--ink);border-radius:20px;box-shadow:0 6px 0 var(--ink);overflow:hidden;display:grid;flex:none}
+.plst{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);background:var(--paper);min-height:300px}
+@media (max-width:760px){.plst{grid-template-columns:1fr}}
+.plfig{position:relative;padding:14px;display:grid;place-items:center;min-width:0}
+.plh{position:relative;width:100%;max-width:560px}
+.plh img{display:block;width:100%;height:auto}
+.plh svg.ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.plh .qhtml li{border-radius:8px;padding:2px 6px;transition:background .4s;align-items:center}
+.plh .hl{background:#FFF3B8;box-shadow:0 0 0 2px var(--sun)}
+.mk{font:700 26px var(--hand);margin-left:auto;animation:pop .5s cubic-bezier(.3,1.7,.5,1) both}.mk.ok{color:var(--mint)}.mk.no{color:#E5243B}
+.plb{border-left:2px dashed var(--line);padding:16px 16px 12px;background-image:linear-gradient(transparent 39px,#E8EBFB 40px);background-size:100% 40px;font:700 26px/40px var(--hand);color:var(--bg);min-width:0;overflow-wrap:anywhere}
+@media (max-width:760px){.plb{border-left:0;border-top:2px dashed var(--line);min-height:150px}}
+.plb .ln{display:block;white-space:pre-wrap}.plb .ln span{opacity:0}.plb .ln span.on{opacity:1}
+.plb .ans{display:inline-block;margin-top:6px;background:var(--sun);color:var(--ink);border:2px solid var(--ink);border-radius:12px;padding:0 12px;font:800 22px/38px var(--display);animation:pop .6s cubic-bezier(.3,1.7,.5,1) both}
+.plcap{background:var(--stage);color:var(--on-bg);padding:12px 16px;min-height:60px;font:700 16px/1.45 var(--body);display:flex;gap:10px;align-items:flex-start}
+.plcap .st{flex:none;background:var(--sun);color:var(--ink);border:2px solid var(--ink);border-radius:8px;font:800 12px var(--body);padding:1px 7px;margin-top:2px}
+.plctl{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--stage);border-top:2px solid #1c2470;flex-wrap:wrap}
+.plctl .x.big{width:52px;height:52px;background:var(--sun)}
+.plctl svg{width:22px;height:22px;fill:none;stroke:var(--ink);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.plpg{flex:1;min-width:110px;display:flex;gap:4px}.plpg i{flex:1;height:8px;border-radius:99px;background:#1c2470;overflow:hidden;cursor:pointer;position:relative}.plpg i b{position:absolute;inset:0;width:0;background:var(--sun)}
+.plsp{font:800 13px var(--body);color:var(--on-bg);border:2px solid var(--on-bg-mute);border-radius:10px;padding:4px 8px;background:none;cursor:pointer}
+.plask{margin:14px;background:var(--card);border:2px solid var(--ink);border-radius:18px;box-shadow:0 5px 0 var(--ink);padding:14px;display:grid;gap:10px;flex:none}
+.plask h3{margin:0;font:800 18px var(--display)}
+.arow{display:flex;gap:8px}.arow input{flex:1;min-width:0}
+.chat{display:grid;gap:8px}
+.msg{border:2px solid var(--ink);border-radius:14px;padding:8px 12px;font-weight:600;animation:pop .35s cubic-bezier(.3,1.5,.5,1) both;max-width:92%;white-space:pre-wrap}
+.msg.me{background:var(--sun);justify-self:end;border-radius:14px 14px 4px 14px}
+.msg.ai{background:#E8EBFB;border-radius:14px 14px 14px 4px}.msg.ai small{display:block;font:800 11px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+@keyframes pop{from{transform:scale(0) rotate(-20deg);opacity:0}}
+.watch{display:flex;gap:8px;flex-wrap:wrap}
+.bq{display:grid;gap:10px}.bq .stem{font-weight:700;font-size:16px;margin:0}.bq .sek{font-style:italic;color:var(--mute);margin:0}
+.bq .opts2{display:grid;gap:8px}.bq .opts2 button{display:flex;gap:10px;align-items:center;text-align:left;background:#fff;border:2px solid var(--ink);border-radius:12px;padding:9px 12px;font:700 15px var(--body);cursor:pointer;box-shadow:0 3px 0 var(--ink)}
+.bq .opts2 button b{font-family:var(--display)}.bq .opts2 button.ok{background:var(--mint-soft)}.bq .opts2 button.bad{background:var(--pink-soft);animation:shake .45s}
+.diag{font-weight:700;font-size:14px;margin:0}
 </style></head><body>
 <div class="bgmol" id="bgmol" aria-hidden="true"></div>
 <canvas id="fx" aria-hidden="true"></canvas>
@@ -500,7 +539,7 @@ let PR=LS.get('sh2-ilerleme',null)||{v:1,q:{},gun:{},xp:0,rozet:[],hedef:30,yukl
 let DUR=LS.get('sh2-durum',{});
 const now=()=>Date.now();
 const gunK=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-function allQ(){return SQ.map(q=>{const p=PR.q[q.id]||{};return{...q,...p,id:q.id,ans:p.ans!==undefined?p.ans:q.ans,flag:p.flag!==undefined?p.flag:q.flag}}).filter(q=>!q.sil)}
+function allQ(){return [...SQ,...Object.values(PR.ek||{})].map(q=>{const p=PR.q[q.id]||{};return{...q,...p,id:q.id,ans:p.ans!==undefined?p.ans:q.ans,flag:p.flag!==undefined?p.flag:q.flag}}).filter(q=>!q.sil)}
 const isDue=q=>q.seen&&(q.due||0)<=now();
 function setP(id,patch){PR.q[id]={...(PR.q[id]||{}),...patch,t:now()};LS.set('sh2-ilerleme',PR);syncSoon()}
 
@@ -508,7 +547,7 @@ function mergeP(r,l){
   const o={...r,q:{...r.q},gun:{...(r.gun||{})}};
   for(const[k,v]of Object.entries(l.q||{}))if(!o.q[k]||(v.t||0)>(o.q[k].t||0))o.q[k]=v;
   for(const[k,v]of Object.entries(l.gun||{})){const a=o.gun[k]||{n:0,d:0};o.gun[k]={n:Math.max(a.n||0,v.n||0),d:Math.max(a.d||0,v.d||0)}}
-  o.xp=Math.max(r.xp||0,l.xp||0);o.rozet=[...new Set([...(r.rozet||[]),...(l.rozet||[])])];
+  o.ek={...(r.ek||{}),...(l.ek||{})};o.xp=Math.max(r.xp||0,l.xp||0);o.rozet=[...new Set([...(r.rozet||[]),...(l.rozet||[])])];
   o.hedef=(l.ht||0)>(r.ht||0)?l.hedef:r.hedef;o.ht=Math.max(l.ht||0,r.ht||0);o.yukleme=Math.max(r.yukleme||0,l.yukleme||0);
   return o}
 
@@ -641,9 +680,15 @@ function connect(){
 function settings(){
   sheet(`<h3>Ayarlar</h3><div class="fld"><span class="lab">Günlük hedef</span><div class="chips" id="sH">${[10,20,30,50,80,100].map(v=>`<button class="chip" data-h="${v}" aria-pressed="${PR.hedef===v}">${v} soru</button>`).join('')}</div></div>
   <div class="tg"><span>Yatay tablette yan yana düzen</span><button class="sw2" id="sY" role="switch" aria-checked="${OPT.yan!==false}" aria-label="Yan yana düzen"></button></div>
+  <div class="fld"><label class="lab" for="sG">Gemini anahtarı (soru sorma, Anlamadım, Benzer soru)</label><input class="inp" id="sG" type="password" autocomplete="off" placeholder="AIza…" value="${esc(GM.key)}"><small style="color:var(--mute);font-weight:600">aistudio.google.com → Get API key. Anahtar sadece bu cihazda saklanır.</small></div>
+  <div class="tg"><span>Sesli anlatım</span><button class="sw2" id="sS" role="switch" aria-checked="${SES}" aria-label="Sesli anlatım"></button></div>
+  <button class="btn ghost sm" id="sT">Sesi test et</button><p class="diag" id="sTo"></p>
   <p style="margin:0;font-size:13px;color:var(--mute);font-weight:600">Bağlı depo: ${esc(CFG.repo)}</p>
   <div class="row"><button class="btn ghost" id="sR">Şimdi eşitle</button><button class="btn pink" id="sX">Bağlantıyı kes</button></div>`,(el,close)=>{
     el.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{PR.hedef=+b.dataset.h;PR.ht=now();LS.set('sh2-ilerleme',PR);syncSoon();el.querySelectorAll('[data-h]').forEach(x=>x.setAttribute('aria-pressed',x===b))});
+    $('#sG',el).onchange=e=>{GM.key=e.target.value.trim();GM.model='';LS.set('sh2-gkey',GM.key);LS.set('sh2-gmodel','');toast(GM.key?'Gemini anahtarı kaydedildi.':'Gemini anahtarı silindi.')};
+    $('#sS',el).onclick=e=>{SES=!SES;LS.set('sh2-ses',SES);e.currentTarget.setAttribute('aria-checked',SES)};
+    $('#sT',el).onclick=()=>sesTest($('#sTo',el));
     $('#sY',el).onclick=e=>{OPT.yan=OPT.yan===false;e.currentTarget.setAttribute('aria-checked',OPT.yan!==false);LS.set('sh-opt',OPT)};
     $('#sR',el).onclick=async()=>{await pushP();if(await pull())toast('Eşitlendi.');close();home()};
     $('#sX',el).onclick=e=>{const b=e.currentTarget;if(!b.dataset.c){b.dataset.c=1;b.textContent='Emin misin? Tekrar dokun';return}CFG.token='';LS.set('sh2-cfg',CFG);close();connect()};
@@ -773,7 +818,8 @@ function finish(k){
   const exp=ce?`${q.tip==='img'?`<p class="lab" style="margin:0">Zekanın çözümü${cl!=null&&cl!==q.ans?` · zeka ${LET[cl]} buldu`:''}</p>`:''}<p>${esc(ce)}</p>`:q.solve==='pending'?'<p>Bu sorunun çözümü hazırlanıyor, sonraki sefer görünecek.</p>':'';
   const aiNote=q.src==='ai'&&(PR.q[q.id]||{}).ans===undefined?`<p style="font-size:13px;font-weight:700;margin:0">Bu sorunun cevabını zeka buldu, yanlış olabilir. <button class="btn ghost sm" id="fixA">Cevabı düzelt</button></p>`:'';
   const nt=q.not||q.note?`<div class="stick"><small>Notun</small>${esc(q.not||q.note)}</div>`:'';
-  $('#abar').insertAdjacentHTML('afterbegin',`<div class="fb ${R.blank?'blank':R.ok?'ok':'bad'}"><h3>${R.blank?'Boş bıraktın · cevap '+LET[q.ans]:R.ok?(T.streak>=3?`Doğru! ${T.streak} seri`:'Doğru!'):'Yanlış · cevap '+LET[q.ans]}</h3>${exp}${nt}${aiNote}<p style="font-size:13px;color:var(--mute)">Bu soru ${days} gün sonra tekrar gelecek.</p></div>`);
+  $('#abar').insertAdjacentHTML('afterbegin',`<div class="fb ${R.blank?'blank':R.ok?'ok':'bad'}"><h3>${R.blank?'Boş bıraktın · cevap '+LET[q.ans]:R.ok?(T.streak>=3?`Doğru! ${T.streak} seri`:'Doğru!'):'Yanlış · cevap '+LET[q.ans]}</h3>${exp}${nt}${aiNote}<div class="watch"><button class="btn sm" id="wA">▶ Anlatımı izle</button><button class="btn ghost sm" id="wB">Benzer soru üret</button></div><p style="font-size:13px;color:var(--mute)">Bu soru ${days} gün sonra tekrar gelecek.</p></div>`);
+  $('#wA').onclick=()=>anlat(allQ().find(x=>x.id===q.id)||q);$('#wB').onclick=()=>benzer(q);
   if($('#fixA'))$('#fixA').onclick=()=>sheet(`<h3>Doğru cevap hangisi?</h3><div class="ansrow">${[...LET].map((l,i)=>`<button class="chip" data-a="${i}" aria-pressed="${q.ans===i}">${l}</button>`).join('')}<span></span></div>`,(el,close)=>el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{setP(q.id,{ans:+b.dataset.a});close();toast('Cevap kaydedildi.')}));
   const ab=$('.abtns');ab.innerHTML=`<button class="btn" id="nx" style="grid-column:1/-1">${last?'Sonucu gör':'Sonraki soru'} ▸</button>`;ab.style.gridTemplateColumns='1fr';
   $('#nx').onclick=()=>{if(last)result();else{T.i++;T.usedHint=false;openQ()}};
@@ -804,7 +850,7 @@ function result(den){
   if($('#rw'))$('#rw').onclick=()=>startTest(wr);$('#hm').onclick=()=>{T=null;home()};scrollTo(0,0);
   checkBadges({cozdu:n>0,kusursuz:n>=10&&d===n,deneme:!!den,maxSeri:T.maxSeri||0});pushP();
 }
-function reviewOne(id){const q=allQ().find(x=>x.id===id);if(!q)return;sheet(`<h3>${esc(q.konu||q.ders)}</h3><div class="prev" style="background:#fff">${qHTML(q)}</div><p style="margin:0;font-weight:800">Doğru cevap: ${q.ans!=null?LET[q.ans]:'?'}</p>${q.cozum?`<p style="margin:0;font-weight:600">${esc(q.cozum)}</p>`:''}`,el=>fillImgs(el))}
+function reviewOne(id){const q=allQ().find(x=>x.id===id);if(!q)return;sheet(`<h3>${esc(q.konu||q.ders)}</h3><div class="prev" style="background:#fff">${qHTML(q)}</div><p style="margin:0;font-weight:800">Doğru cevap: ${q.ans!=null?LET[q.ans]:'?'}</p>${q.cozum?`<p style="margin:0;font-weight:600">${esc(q.cozum)}</p>`:''}<div class="watch"><button class="btn sm" id="rA">▶ Anlatımı izle</button><button class="btn ghost sm" id="rB">Benzer soru üret</button></div>`,(el,close)=>{fillImgs(el);$('#rA',el).onclick=()=>{close();anlat(q)};$('#rB',el).onclick=()=>{close();benzer(q)}})}
 
 /* ================= konu haritası ================= */
 function konuMap(){
@@ -857,6 +903,144 @@ function editQ(q0,after){if(!q0)return;const q={...q0};sheet(`<h3>Soruyu düzenl
   el.querySelectorAll('#fA .chip').forEach(b=>b.onclick=()=>{const a=+b.dataset.a;q.ans=a<0?null:a;el.querySelectorAll('#fA .chip').forEach(x=>x.setAttribute('aria-pressed',x===b))});
   $('#eS',el).onclick=()=>{setP(q.id,{ders:q.ders,konu:$('#fK',el).value.trim(),ans:q.ans,note:$('#fN',el).value.trim(),flag:false});close();toast('Kaydedildi.');after&&after()};
   $('#eD',el).onclick=e=>{const b=e.currentTarget;if(!b.dataset.c){b.dataset.c=1;b.textContent='Silmek için tekrar dokun';return}setP(q.id,{sil:true});close();toast('Soru silindi.');after&&after()}})}
+
+/* ================= Gemini (cihazdan, kullanıcının anahtarıyla) ================= */
+const GM={key:LS.get('sh2-gkey',''),model:LS.get('sh2-gmodel','')};
+const GMODELS=['gemini-3.5-flash-lite','gemini-3.1-flash-lite','gemini-flash-lite-latest','gemini-2.5-flash-lite'];
+async function gemini(parts,json){
+  if(!GM.key)throw{code:'nokey'};
+  const list=GM.model?[GM.model,...GMODELS.filter(m=>m!==GM.model)]:GMODELS;
+  for(const m of list){
+    let r;try{r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(GM.key)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts}],generationConfig:{temperature:.5,...(json?{responseMimeType:'application/json'}:{})}})})}catch(e){throw{code:'net'}}
+    if(r.status===404)continue;
+    if(r.status===429)throw{code:'rate'};
+    if(r.status===400||r.status===403){const t=await r.text();throw{code:/api key|API_KEY/i.test(t)?'badkey':'err'}}
+    if(!r.ok)throw{code:'err'};
+    const j=await r.json(),txt=((j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts)||[]).map(p=>p.text||'').join('');
+    if(GM.model!==m){GM.model=m;LS.set('sh2-gmodel',m)}
+    if(!json)return txt.trim();
+    try{return JSON.parse(txt.replace(/^```(?:json)?|```$/gm,'').trim())}catch(e){throw{code:'err'}}
+  }
+  throw{code:'nomodel'}
+}
+const gErr=e=>!navigator.onLine?'İnternet bağlantısı yok.':e&&e.code==='nokey'?'Önce Ayarlar\'dan Gemini anahtarını gir.':e&&e.code==='rate'?'Gemini sınırına takıldın, bir dakika sonra tekrar dene.':e&&e.code==='badkey'?'Gemini anahtarı geçersiz. Ayarlardan kontrol et.':'Gemini cevap vermedi, tekrar dene.';
+async function qParts(q){
+  if(q.tip==='img'){const u=await imgURL(q.img),b=await (await fetch(u)).blob();const d=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]);fr.readAsDataURL(b)});return[{inline_data:{mime_type:'image/jpeg',data:d}}]}
+  return[{text:'Soru metni: '+String(q.html||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ')}]
+}
+const qBilgi=q=>(Array.isArray(q.o)?'Şıklar: '+q.o.map((t,i)=>LET[i]+') '+t).join(', ')+'. ':'')+(q.ans!=null?'Doğru cevap: '+LET[q.ans]+'. ':'')+(q.cozum?'Kısa çözüm: '+q.cozum:'');
+
+/* ================= ses (cihazın Türkçe sesi) ================= */
+let VOICE=null;function pickV(){try{VOICE=speechSynthesis.getVoices().find(v=>/^tr([-_]|$)/i.test(v.lang))||null}catch(e){VOICE=null}}
+try{speechSynthesis.onvoiceschanged=pickV}catch(e){}pickV();
+let SES=LS.get('sh2-ses',true);
+function hush(){try{speechSynthesis.cancel()}catch(e){}}
+function say(t,rate){return new Promise(res=>{if(!SES||!('speechSynthesis' in window))return res(false);try{hush();const u=new SpeechSynthesisUtterance(t);if(VOICE)u.voice=VOICE;u.lang=VOICE?VOICE.lang:'tr-TR';u.rate=rate||1;let st=false;u.onstart=()=>st=true;u.onend=()=>res(true);u.onerror=()=>res(false);speechSynthesis.speak(u);setTimeout(()=>{if(!st&&!speechSynthesis.speaking)res(false)},3000)}catch(e){res(false)}})}
+async function sesTest(out){
+  if(!('speechSynthesis' in window)){out.textContent='Bu tarayıcı sesli okumayı desteklemiyor. Uygulamayı Chrome ile aç.';return}
+  pickV();out.textContent='Ses deneniyor…';const prev=SES;SES=true;const ok=await say('Merhaba, ses çalışıyor. Hadi soru çözelim.');SES=prev;
+  out.textContent=ok?(VOICE?'Ses çalışıyor ('+VOICE.name+').':'Ses çalışıyor ama Türkçe ses yerine varsayılan ses kullanıldı. Türkçe sesi aşağıdaki gibi indir.'):'Ses çıkmadı.';
+  if(!ok||!VOICE)out.textContent+=' Tablette: Ayarlar → Genel yönetim (ya da Sistem) → Dil ve giriş → Metin okuma çıkışı → Tercih edilen motor: Google Metin Okuma → dişli simgesi → Ses verilerini yükle → Türkçe. Sonra uygulamayı kapatıp aç. Ayrıca tabletin medya sesinin açık olduğundan emin ol.';
+}
+
+/* ================= anlatım oynatıcısı ================= */
+const NS='http://www.w3.org/2000/svg',RENK=['#FFD60A','#FF4F9A','#2742F5','#22C58B','#FF8A00'];
+let PL=null;
+function scriptOf(q){
+  if(Array.isArray(q.anlatim)&&q.anlatim.length)return q.anlatim;
+  const cs=String(q.cozum||'').split(/(?<=[.!?])\s+/).filter(Boolean);
+  const a=cs.map(s=>({soz:s,yaz:[],ciz:[]}));if(q.ans!=null)a.push({soz:'Doğru cevap '+LET[q.ans]+'.',yaz:['Cevap: '+LET[q.ans]+(q.o&&q.o[q.ans]?') '+q.o[q.ans]:'')],ciz:[]});
+  return a;
+}
+async function anlat(q){
+  const A=scriptOf(q);if(!A.length){toast(q.solve==='pending'?'Bu sorunun anlatımı hazırlanıyor, biraz sonra tekrar bak.':'Bu soru için anlatım yok.');return}
+  closePl();const el=document.createElement('div');el.className='pl';document.body.appendChild(el);
+  PL={q,A,i:0,playing:false,rate:1,token:0,timer:0,el,svg:null};
+  const ar=(q.h||400)/(q.w||600);
+  el.innerHTML=`<div class="fbar"><button class="x" id="plx" aria-label="Kapat">✕</button><b>${esc(q.konu||q.ders||'Anlatım')}</b></div>
+  <div class="plc"><div class="plst"><div class="plfig"><div class="plh" id="plh">${q.tip==='html'?q.html:`<img alt="Soru" id="plimg"><svg class="ov" viewBox="0 0 1000 ${Math.round(1000*ar)}" preserveAspectRatio="none"></svg>`}</div></div><div class="plb" id="plb" aria-live="polite"></div></div>
+  <div class="plcap"><span class="st" id="plst">1/${A.length}</span><span id="plcap">Oynat'a bas, anlatım başlasın.</span></div>
+  <div class="plctl"><button class="x" id="plp" aria-label="Önceki adım"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button><button class="x big" id="plplay" aria-label="Oynat"><svg viewBox="0 0 24 24" id="plpi"><path d="M8 5l11 7-11 7z" fill="#0A0F3C"/></svg></button><button class="x" id="pln" aria-label="Sonraki adım"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button><div class="plpg" id="plpg">${A.map((_,n)=>`<i data-n="${n}"><b></b></i>`).join('')}</div><button class="plsp" id="plspd">1x</button><button class="x" id="plsnd" aria-label="Ses"><svg viewBox="0 0 24 24" id="plsi"></svg></button></div></div>
+  <div class="plask"><h3>Takıldığın yeri sor</h3><div class="watch"><button class="btn sm" id="plno">Bu adımı anlamadım</button><button class="btn ghost sm" id="plbenz">Benzer soru üret</button></div>
+  <div class="chips" id="plsug">${['Neden böyle yaptık?','Bu kural nereden geliyor?','Daha kısa yolu var mı?','Bu konuda nelere dikkat etmeliyim?'].map(t=>`<button class="chip">${t}</button>`).join('')}</div>
+  <div class="arow"><input class="inp" id="plq" placeholder="Neden bu açı 70 derece?" aria-label="Sorunu yaz"><button class="btn pink sm" id="plgo">Sor</button></div><div class="chat" id="plchat"></div></div>`;
+  if(q.tip==='img'){PL.svg=el.querySelector('svg.ov');try{$('#plimg',el).src=await imgURL(q.img)}catch(e){}}
+  else{const h=$('#plh',el);h.querySelectorAll('p').forEach((p,n)=>p.dataset.id='p'+n);h.querySelectorAll('li').forEach((l,n)=>l.dataset.id='li'+n)}
+  sndIcon();
+  $('#plx',el).onclick=closePl;
+  $('#plplay',el).onclick=()=>{if(PL.playing){pausePl();return}if(PL.i>=A.length)PL.i=0;jumpPl(PL.i);PL.playing=true;plIcon();runPl()};
+  $('#pln',el).onclick=()=>{if(PL.i<A.length-1)jumpPl(PL.i+1)};$('#plp',el).onclick=()=>jumpPl(Math.max(0,PL.i-1));
+  el.querySelectorAll('#plpg i').forEach(b=>b.onclick=()=>jumpPl(+b.dataset.n));
+  $('#plspd',el).onclick=e=>{PL.rate=PL.rate===1?1.25:PL.rate===1.25?1.5:1;e.currentTarget.textContent=PL.rate+'x'};
+  $('#plsnd',el).onclick=()=>{SES=!SES;LS.set('sh2-ses',SES);sndIcon();if(!SES)hush()};
+  $('#plno',el).onclick=()=>{const st=A[Math.min(PL.i,A.length-1)];askPl('Bu adımı anlamadım: "'+st.soz+'"',`Öğrenci şu adımı anlamadı: "${st.soz}". Bu adımı daha basit ve farklı bir yoldan, günlük hayattan küçük bir örnekle 2-4 kısa cümlede anlat.`)};
+  $('#plbenz',el).onclick=()=>{pausePl();benzer(q)};
+  el.querySelectorAll('#plsug .chip').forEach(c=>c.onclick=()=>askPl(c.textContent));
+  $('#plgo',el).onclick=()=>askPl($('#plq',el).value);$('#plq',el).addEventListener('keydown',e=>{if(e.key==='Enter')askPl($('#plq',el).value)});
+}
+function closePl(){if(!PL)return;PL.token++;clearTimeout(PL.timer);hush();PL.el.remove();PL=null}
+function sndIcon(){const s=PL&&$('#plsi',PL.el);if(s)s.innerHTML=SES?'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11"/>':'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l5 6M22 9l-5 6"/>'}
+function plIcon(){const s=$('#plpi',PL.el);s.innerHTML=PL.playing?'<path d="M8 5v14M16 5v14" stroke-width="3.2"/>':'<path d="M8 5l11 7-11 7z" fill="#0A0F3C"/>'}
+function pausePl(){if(!PL)return;PL.playing=false;PL.token++;clearTimeout(PL.timer);hush();plIcon()}
+function ycPl(v){return PL.q.tip==='img'?v*(PL.q.h||400)/(PL.q.w||600):v}
+function drawPl(c,dur,col){
+  const el=PL.el;
+  if(c.t==='vurgu'||c.t==='isaret'){const t=$(`#plh [data-id="${c.i}"]`,el);if(!t)return;if(c.t==='vurgu'){el.querySelectorAll('#plh .hl').forEach(x=>x.classList.remove('hl'));t.classList.add('hl')}else{const m=document.createElement('span');m.className='mk '+(c.ok?'ok':'no');m.textContent=c.ok?'✓':'✗';t.appendChild(m)}return}
+  const svg=PL.svg;if(!svg||!Array.isArray(c.p))return;const p=c.p;let e;
+  const anim=(e,L)=>{e.style.strokeDasharray=L;e.style.strokeDashoffset=L;e.style.transition=`stroke-dashoffset ${dur}ms ease-in-out`;svg.appendChild(e);requestAnimationFrame(()=>requestAnimationFrame(()=>e.style.strokeDashoffset=0))};
+  if(c.t==='cizgi'&&p.length===4){e=document.createElementNS(NS,'line');e.setAttribute('x1',p[0]);e.setAttribute('y1',ycPl(p[1]));e.setAttribute('x2',p[2]);e.setAttribute('y2',ycPl(p[3]));e.setAttribute('stroke',col);e.setAttribute('stroke-width',8);e.setAttribute('stroke-linecap','round');e.setAttribute('stroke-opacity',.75);anim(e,Math.hypot(p[2]-p[0],ycPl(p[3])-ycPl(p[1])))}
+  else if(c.t==='cokgen'&&p.length>=6){e=document.createElementNS(NS,'polygon');const pts=[];for(let k=0;k<p.length;k+=2)pts.push(p[k]+','+ycPl(p[k+1]));e.setAttribute('points',pts.join(' '));e.setAttribute('fill',col);e.setAttribute('fill-opacity',0);e.setAttribute('stroke',col);e.setAttribute('stroke-width',3);e.style.transition=`fill-opacity ${dur}ms`;svg.querySelectorAll('polygon').forEach(x=>x.setAttribute('fill-opacity',.07));svg.appendChild(e);requestAnimationFrame(()=>requestAnimationFrame(()=>e.setAttribute('fill-opacity',.3)))}
+  else if(c.t==='daire'&&p.length>=2){const r=(c.r||30)*1.3;e=document.createElementNS(NS,'circle');e.setAttribute('cx',p[0]);e.setAttribute('cy',ycPl(p[1]));e.setAttribute('r',r);e.setAttribute('fill','none');e.setAttribute('stroke',col==='#FFD60A'?'#E5243B':col);e.setAttribute('stroke-width',6);anim(e,2*Math.PI*r)}
+  else if(c.t==='etiket'&&p.length>=2){e=document.createElementNS(NS,'text');e.setAttribute('x',p[0]);e.setAttribute('y',ycPl(p[1]));e.setAttribute('fill','#E5243B');e.setAttribute('font-size',48);e.setAttribute('font-family','Caveat, cursive');e.setAttribute('font-weight',700);e.textContent=c.s||'';e.style.opacity=0;e.style.transition='opacity .4s';svg.appendChild(e);setTimeout(()=>e.style.opacity=1,dur*.5)}
+}
+function writePl(s,dur,my){const ln=document.createElement('span');ln.className='ln';[...s].forEach(ch=>{const sp=document.createElement('span');sp.textContent=ch;ln.appendChild(sp)});$('#plb',PL.el).appendChild(ln);const L=ln.children;[...L].forEach((c,k)=>setTimeout(()=>{if(PL&&my===PL.token)c.classList.add('on')},k*dur/L.length))}
+function stepPl(n,instant){
+  const a=PL.A[n],my=PL.token,dur=instant?0:900/PL.rate,col=RENK[n%RENK.length],el=PL.el;
+  $('#plst',el).textContent=`${n+1}/${PL.A.length}`;$('#plcap',el).textContent=a.soz;
+  (a.ciz||[]).forEach((c,k)=>setTimeout(()=>{if(PL&&my===PL.token)drawPl(c,dur,col)},instant?0:k*350/PL.rate));
+  (a.yaz||[]).forEach((s,k)=>{const cev=/^cevap\s*:/i.test(s);setTimeout(()=>{if(!PL||my!==PL.token)return;if(cev){const b=document.createElement('span');b.className='ans';b.textContent=s;$('#plb',el).appendChild(b);if(!instant)burst(b,40)}else writePl(s,instant?0:Math.min(1400,s.length*70)/PL.rate,my)},instant?0:(400+k*1100)/PL.rate)});
+  if(instant)return Promise.resolve();
+  const bar=$('#plpg',el).children[n].firstChild;bar.style.transition='none';bar.style.width='0';
+  const est=Math.max(2500,a.soz.length*62)/PL.rate;requestAnimationFrame(()=>{bar.style.transition=`width ${est}ms linear`;bar.style.width='100%'});
+  return new Promise(res=>{let done=false;const fin=()=>{if(!done){done=true;bar.style.transition='none';bar.style.width='100%';res()}};
+    say(a.soz,PL.rate).then(ok=>{if(ok)setTimeout(fin,450);else PL&&(PL.timer=setTimeout(fin,est))});setTimeout(fin,est*2.2+3000)});
+}
+function resetPl(){PL.token++;clearTimeout(PL.timer);hush();const el=PL.el;if(PL.svg)PL.svg.innerHTML='';el.querySelectorAll('#plh .hl').forEach(x=>x.classList.remove('hl'));el.querySelectorAll('#plh .mk').forEach(x=>x.remove());$('#plb',el).innerHTML='';el.querySelectorAll('#plpg b').forEach(b=>{b.style.transition='none';b.style.width='0'})}
+async function runPl(){const P0=PL;while(PL===P0&&PL.playing&&PL.i<PL.A.length){const my=PL.token;await stepPl(PL.i);if(PL!==P0||my!==PL.token||!PL.playing)return;PL.i++}if(PL===P0&&PL.i>=PL.A.length){PL.playing=false;plIcon()}}
+function jumpPl(n){resetPl();for(let k=0;k<n;k++){stepPl(k,true);$('#plpg',PL.el).children[k].firstChild.style.width='100%'}PL.i=n;const a=PL.A[n];$('#plst',PL.el).textContent=`${n+1}/${PL.A.length}`;$('#plcap',PL.el).textContent=a.soz;if(PL.playing)runPl()}
+async function askPl(shown,istem){
+  shown=String(shown||'').trim();if(!shown||!PL)return;const q=PL.q,el=PL.el;$('#plq',el).value='';pausePl();
+  const chat=$('#plchat',el);const me=document.createElement('div');me.className='msg me';me.textContent=shown;chat.appendChild(me);
+  const ai=document.createElement('div');ai.className='msg ai';ai.innerHTML='<small>Koç</small><span>Düşünüyor…</span>';chat.appendChild(ai);ai.scrollIntoView({behavior:'smooth',block:'nearest'});const out=ai.lastChild;
+  const st=PL.A[Math.min(PL.i,PL.A.length-1)];
+  const prompt=`Sen sabırlı bir TYT koçusun. Öğrenci bu sorunun adım adım anlatımını izliyor. ${qBilgi(q)}
+Anlatım adımları: ${PL.A.map((a,n)=>(n+1)+') '+a.soz).join(' ')}
+Öğrenci şu an ${Math.min(PL.i+1,PL.A.length)}. adımda: "${st.soz}".
+${istem||'Öğrencinin sorusu: "'+shown+'"'}
+Türkçe, düz metin, en fazla 4 kısa cümle. "Neden" sorularında kuralın mantığını açıkla. Markdown kullanma.`;
+  try{const parts=await qParts(q);const t=await gemini([...parts,{text:prompt}]);out.textContent=t;say(t)}catch(e){out.textContent=gErr(e)}
+}
+
+/* ================= benzer soru ================= */
+async function benzer(q){
+  let close=sheet(`<h3>Benzer soru</h3><div class="bq" id="bq"><p class="lab" style="margin:0">Gemini yeni bir soru hazırlıyor…</p><div class="proc" style="min-height:60px"><span class="beam"></span></div></div>`,()=>{});
+  const box=document.querySelector('#bq');
+  try{
+    const parts=await qParts(q);
+    const y=await gemini([...parts,{text:`Bu bir TYT/AYT sorusu (${q.ders||''}${q.konu?', '+q.konu:''}). ${qBilgi(q)}
+Aynı kazanımı ölçen, aynı mantıkla çözülen ama sayıları/durumu değişmiş YENİ bir çoktan seçmeli soru yaz. Soru metinden tam anlaşılmalı; şekil gerekiyorsa şekli kısa ve açık bir cümleyle tarif et. Tek doğru cevabı olsun, çeldiriciler mantıklı olsun.
+Sadece JSON döndür: {"soru":"Türkçe soru metni","sekil":"şekil tarifi ya da null","secenekler":["5 şık metni, harfsiz"],"cevap":"A-E","cozum":"2-4 kısa cümle çözüm"}`}],true);
+    const o=Array.isArray(y.secenekler)?y.secenekler.slice(0,5).map(s=>String(s)):[],ci=LET.indexOf(String(y.cevap||'').trim().toUpperCase()[0]);
+    if(!y.soru||o.length<5||ci<0)throw{code:'err'};
+    if(!box.isConnected)return;
+    box.innerHTML=`<p class="stem"></p>${y.sekil?'<p class="sek"></p>':''}<div class="opts2">${o.map((t,i)=>`<button data-i="${i}"><b>${LET[i]})</b><span></span></button>`).join('')}</div><div id="bqr"></div>`;
+    box.querySelector('.stem').textContent=y.soru;if(y.sekil)box.querySelector('.sek').textContent='Şekil: '+y.sekil;
+    box.querySelectorAll('.opts2 button').forEach((b,i)=>{b.querySelector('span').textContent=o[i];b.onclick=()=>{if(box.dataset.done)return;box.dataset.done=1;const ok=i===ci;b.classList.add(ok?'ok':'bad');box.querySelectorAll('.opts2 button')[ci].classList.add('ok');if(ok){burst(b,40);addXP(6,b)}
+      const r=$('#bqr');r.innerHTML=`<div class="fb ${ok?'ok':'bad'}" style="max-height:none"><h3>${ok?'Doğru!':'Cevap '+LET[ci]}</h3><p></p></div><div class="row" style="margin-top:10px"><button class="btn sm" id="bqAdd">Havuza ekle</button><button class="btn ghost sm" id="bqNew">Bir tane daha</button></div>`;r.querySelector('p').textContent=String(y.cozum||'');
+      $('#bqAdd').onclick=e=>{const id='ek'+Date.now().toString(36);PR.ek=PR.ek||{};PR.ek[id]={id,tip:'html',html:`<div class="qhtml"><p>${esc(y.soru)}</p>${y.sekil?`<p><i>Şekil: ${esc(y.sekil)}</i></p>`:''}</div>`,o,ans:ci,mark:ci,ders:q.ders,konu:q.konu,cozum:String(y.cozum||'').slice(0,1500),solve:'done',kaynak:'Benzer soru',eklendi:new Date().toISOString(),t:now()};LS.set('sh2-ilerleme',PR);syncSoon();e.currentTarget.textContent='Eklendi ✓';e.currentTarget.disabled=true;toast('Benzer soru havuza eklendi.')};
+      $('#bqNew').onclick=()=>{close();benzer(q)}}});
+  }catch(e){if(box.isConnected)box.innerHTML=`<p class="diag"></p>`,box.firstChild.textContent=gErr(e)}
+}
 
 /* ================= başlat ================= */
 window.addEventListener('error',e=>console.warn(e.message));
