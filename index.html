@@ -712,23 +712,46 @@ function settings(){
 }
 
 /* ================= yükleme ================= */
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('pdf okuyucu yüklenemedi'));document.head.appendChild(s)})}
+async function pdfLib(){if(window.pdfjsLib)return;await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}
+const canvasB64=(c,q)=>c.toDataURL('image/jpeg',q||.86).split(',')[1];
+async function putTekrar(path,b64,msg){let son;for(let i=0;i<3;i++){try{return await GH.put(path,b64,null,msg)}catch(e){son=e;if(e.status===401||e.status===403||e.status===404)break;await new Promise(r=>setTimeout(r,2000*(i+1)))}}throw son}
 async function upload(f,sessiz){
-  const isPdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name),isImg=/^image\//.test(f.type);
+  const isPdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name),isImg=/^image\//.test(f.type)||/\.(jpe?g|png|webp|heic)$/i.test(f.name);
   if(!isPdf&&!isImg){toast('Sadece PDF ya da fotoğraf yükleyebilirsin.');return}
-  if(f.size>45e6){toast('Dosya çok büyük (45 MB üstü). PDF\'i parçalara böl.');return}
-  const card=document.createElement('div');card.className='proc';card.innerHTML='<span class="beam"></span><b>Yükleniyor…</b><small>'+esc(f.name)+'</small>';
-  const anchor=app.querySelector('.top3');anchor&&anchor.after(card);
+  const card=document.createElement('div');card.className='proc';card.innerHTML='<span class="beam"></span><b>Yükleniyor…</b><small></small>';card.querySelector('small').textContent=f.name;
+  const anchor=app.querySelector('.top3');if(anchor)anchor.after(card);else app.prepend(card);
+  const durumYaz=t=>{card.querySelector('b').textContent=t};
+  const d=new Date(),st=d.getFullYear()+[d.getMonth()+1,d.getDate(),d.getHours(),d.getMinutes(),d.getSeconds()].map(v=>String(v).padStart(2,'0')).join('')+String(Math.random()).slice(2,4);
+  const ad=(f.name.replace(/\.[^.]+$/,'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w-]+/g,'-').slice(0,40)||'dosya');
   try{
-    let b64;
-    if(isImg){const bm=await createImageBitmap(f).catch(()=>null);let src=bm;if(!src){src=await new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=URL.createObjectURL(f)})}const W=src.width,H=src.height,s=Math.min(1,2400/Math.max(W,H)),c=document.createElement('canvas');c.width=W*s|0;c.height=H*s|0;c.getContext('2d').drawImage(src,0,0,c.width,c.height);b64=c.toDataURL('image/jpeg',.88).split(',')[1]}
-    else b64=await new Promise((r,j)=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]);fr.onerror=j;fr.readAsDataURL(f)});
-    const d=new Date(),st=d.getFullYear()+[d.getMonth()+1,d.getDate(),d.getHours(),d.getMinutes(),d.getSeconds()].map(v=>String(v).padStart(2,'0')).join('');
-    const ad=(f.name.replace(/\.[^.]+$/,'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w-]+/g,'-').slice(0,40)||'dosya')+(isPdf?'.pdf':'.jpg');
-    await GH.put('gelen/'+st+'-'+ad,b64,null,'yükleme: '+ad);
+    if(isImg){
+      const bm=await createImageBitmap(f).catch(()=>null);let src=bm;if(!src){src=await new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>j(new Error('Fotoğraf açılamadı'));i.src=URL.createObjectURL(f)})}
+      const W=src.width,H=src.height,k=Math.min(1,2400/Math.max(W,H)),c=document.createElement('canvas');c.width=W*k|0;c.height=H*k|0;c.getContext('2d').drawImage(src,0,0,c.width,c.height);
+      await putTekrar(`gelen/${st}-${ad}.jpg`,canvasB64(c,.88),'yükleme: '+ad);
+    }else if(f.size<=4e6){
+      const b64=await new Promise((r,j)=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]);fr.onerror=()=>j(new Error('Dosya okunamadı'));fr.readAsDataURL(f)});
+      await putTekrar(`gelen/${st}-${ad}.pdf`,b64,'yükleme: '+ad);
+    }else{ // büyük PDF: sayfa sayfa görsele çevirip yükle
+      durumYaz('PDF açılıyor…');await pdfLib();
+      const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer(),isEvalSupported:false}).promise;
+      for(let n=1;n<=pdf.numPages;n++){
+        durumYaz(`Sayfa ${n}/${pdf.numPages} yükleniyor…`);
+        const pg=await pdf.getPage(n),v1=pg.getViewport({scale:1}),v=pg.getViewport({scale:1600/v1.width});
+        const c=document.createElement('canvas');c.width=v.width|0;c.height=v.height|0;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+        await pg.render({canvasContext:x,viewport:v}).promise;
+        await putTekrar(`gelen/${st}-${ad}-s${String(n).padStart(3,'0')}.jpg`,canvasB64(c,.85),`yükleme: ${ad} sayfa ${n}`);
+        c.width=c.height=0;
+      }
+    }
     PR.yukleme=(PR.yukleme||0)+1;LS.set('sh2-ilerleme',PR);syncSoon();
-    LS.set('sh2-bekle',now()+15*60e3);DUR={...DUR,calisiyor:true,kota:false,mesaj:'Dosya yüklendi. Zeka birkaç saniye içinde başlayacak.'};
+    LS.set('sh2-bekle',now()+20*60e3);DUR={...DUR,calisiyor:true,kota:false,mesaj:'Dosya yüklendi. Zeka birkaç saniye içinde başlayacak.'};
     if(!sessiz){toast('Yüklendi. Sorular hazır oldukça burada belirecek.');burst(card,40);home();poll(true);checkBadges()}else card.remove();
-  }catch(e){card.remove();toast(ghMsg(e))}
+  }catch(e){
+    card.classList.add('kota');card.innerHTML='<b>Yükleme olmadı</b><small></small><div class="row"><button class="btn sm">Tekrar dene</button><button class="btn ghost sm">Kapat</button></div>';
+    card.querySelector('small').textContent=(e&&e.status?ghMsg(e):(e&&e.message)||'Bilinmeyen hata')+' · '+f.name;
+    const[b1,b2]=card.querySelectorAll('button');b1.onclick=()=>{card.remove();upload(f)};b2.onclick=()=>card.remove();
+  }
 }
 
 /* ================= test kurulumu ================= */
