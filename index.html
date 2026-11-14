@@ -152,6 +152,17 @@ button,input,select,textarea{font:inherit;color:inherit}
 .page canvas.gh{opacity:.32}
 .page canvas.lv.hl{opacity:.4}
 .scratch{border-top:2px dashed var(--line);background-image:radial-gradient(var(--line) 1.2px,transparent 1.3px);background-size:24px 24px;position:relative}
+.scratch.kare{background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:28px 28px}
+.scratch.cizgi{background-image:linear-gradient(transparent 31px,var(--line) 32px);background-size:100% 32px}
+.scratch.bos{background-image:none}
+.selbar{position:absolute;z-index:6;display:flex;gap:2px;background:var(--card);border:2px solid var(--ink);border-radius:12px;padding:3px;box-shadow:0 3px 0 var(--ink);animation:drop .2s both}
+.selbar button{border:0;background:none;font:800 13px var(--body);padding:8px 10px;border-radius:8px;color:var(--ink);cursor:pointer;white-space:nowrap}
+.selbar button:active{background:var(--line)}
+.txin{position:absolute;z-index:6;min-width:120px;background:rgba(255,255,255,.88);border:2px dashed #2742F5;border-radius:8px;padding:0 4px;font-family:Manrope,system-ui,sans-serif;font-weight:700;line-height:1.25;resize:none;outline:0;user-select:text;-webkit-user-select:text;overflow:hidden;white-space:pre}
+.pbpad{height:180px;border:2px dashed var(--line);border-radius:14px;touch-action:none;background:var(--grid)}
+.pbraw{margin:0;font:600 11px ui-monospace,monospace;color:var(--mute);word-break:break-all}
+.seg.shp{flex-wrap:wrap}
+.tb.on2{background:#FFE0E6}
 .scratch span{position:absolute;right:10px;top:6px;font:800 11px var(--body);letter-spacing:.1em;text-transform:uppercase;color:#B7BEE6}
 .snapfx{position:absolute;pointer-events:none;z-index:4;border:3px solid var(--sun);border-radius:50%;width:40px;height:40px;margin:-20px 0 0 -20px;animation:ring .45s ease-out both}
 @keyframes ring{from{transform:scale(.3);opacity:1}to{transform:scale(1.8);opacity:0}}
@@ -361,9 +372,33 @@ function toast(m){document.querySelectorAll('.toast').forEach(t=>t.remove());con
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 function sheet(html,mount){const s=document.createElement('div');s.className='scrim';s.innerHTML=`<div class="sheet" role="dialog">${html}</div>`;document.body.appendChild(s);const close=()=>s.remove();s.addEventListener('click',e=>{if(e.target===s)close()});mount&&mount(s.firstChild,close);return close}
 /* kalemin yan tuşu (S Pen vb.) basılıyken silgi; kalemin silgi ucu da silgi */
-function penEr(e){return e.pointerType==='pen'&&(((e.buttons||0)&(2|32))!==0||e.button===2||e.button===5)}
+let PB=LS.get('sh-pb',null);
+function penEr(e){const bs=e.buttons||0;if(e.pointerType==='pen'&&((bs&34)||e.button===2||e.button===5))return true;
+  if(PB){if(PB.k==='mask'&&e.pointerType!=='touch'&&(bs&PB.m))return true;if(PB.k==='type'&&e.pointerType===PB.t)return true}return false}
 window.tool_=()=>tool;
-document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.vp'))e.preventDefault()});
+function setTool(k){tool=k;LS.set('sh-tool',k);if(k!=='er')LS.set('sh-lastpen',k);document.querySelectorAll('#tools [data-t]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.t===k));const sb=$('#sB');if(sb)sb.classList.toggle('on2',k==='er');if(typeof T!=='undefined'&&T&&T.ink&&k!=='lasso')T.ink.selClear()}
+function erToggle(){if(!$('#tools'))return;setTool(tool==='er'?LS.get('sh-lastpen','pen'):'er');toast(tool==='er'?'Silgi':'Kalem')}
+document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.vp')){e.preventDefault();if(PB&&PB.k==='ctx'&&!(typeof T!=='undefined'&&T&&T.g&&T.g.mode==='draw'))erToggle()}});
+document.addEventListener('keydown',e=>{if(PB&&PB.k==='key'&&(e.key+'|'+e.code)===PB.key&&$('#vp')){e.preventDefault();erToggle()}});
+function penOgret(){sheet(`<h3>Kalem tuşunu tanıt</h3><p id="pbS" style="margin:0;font-weight:700">1) Tuşa <b>basmadan</b> kutuya bir çizgi çiz.</p><div class="pbpad" id="pbP"></div><p class="pbraw" id="pbR"></p><div class="row"><button class="btn ghost sm" id="pbX">Öğrenileni sil</button><button class="btn sm" id="pbK">Kapat</button></div>`,(el,close)=>{
+  const pad=$('#pbP',el),S=$('#pbS',el),Rw=$('#pbR',el);let ph=0,on=0,keys=[],ctx=0;const A={t:new Set(),b:new Set(),bs:0,n:0},B={t:new Set(),b:new Set(),bs:0,n:0};
+  const rec=(o,e)=>{o.t.add(e.pointerType);o.bs|=(e.buttons||0);o.b.add(e.button);o.n++};
+  pad.onpointerdown=e=>{e.preventDefault();try{pad.setPointerCapture(e.pointerId)}catch(_){}on=1;if(ph<2)rec(ph?B:A,e)};
+  pad.onpointermove=e=>{if(ph<2&&(on||e.buttons))rec(ph?B:A,e)};
+  pad.oncontextmenu=e=>{e.preventDefault();if(ph===1)ctx++};
+  const kd=e=>{if(ph===1&&!/^(Shift|Control|Alt|Meta)$/.test(e.key)){keys.push(e.key+'|'+e.code);e.preventDefault()}};document.addEventListener('keydown',kd,true);
+  pad.onpointerup=()=>{on=0;if(ph===0&&A.n){ph=1;S.innerHTML='2) Şimdi kalemin tuşuna <b>basılı tutarak</b> kutuya bir çizgi çiz.'}else if(ph===1&&B.n)setTimeout(coz,250)};
+  const coz=()=>{if(ph!==1)return;ph=2;const tA=[...A.t].join(),tB=[...B.t].join(),ex=B.bs&~A.bs;let rule=null,m;
+    if(ex){rule={k:'mask',m:ex};m='✓ Tuş bulundu. Artık tuşa basılı tutarak çizersen silgi olur.'}
+    else if(tA!==tB&&B.t.size===1&&tB!=='touch'){rule={k:'type',t:tB};m='✓ Tuş bulundu. Artık tuşa basılı tutarak çizersen silgi olur.'}
+    else if(keys.length){rule={k:'key',key:keys[0]};m='✓ Tuş bulundu. Tuşa her bastığında silgi ↔ kalem değişir.'}
+    else if(ctx){rule={k:'ctx'};m='✓ Tuş bulundu. Kalem ekrana değmeden tuşa basınca silgi ↔ kalem değişir.'}
+    else m='Tablet bu tuşu tarayıcıya hiç göndermiyor. Samsung’da: Ayarlar › Gelişmiş özellikler › S Pen › <b>Air command</b>’ı kapatıp tekrar dene. O zamana kadar araç çubuğundaki <b>⇄</b> düğmesi tek dokunuşla silgiye geçirir.';
+    if(rule){PB=rule;LS.set('sh-pb',rule)}S.innerHTML=m;Rw.textContent=`tuşsuz: ${tA} b${A.bs} · tuşlu: ${tB} b${B.bs} btn${[...B.b]} · klavye: ${keys[0]||'-'} · sağtık: ${ctx}`};
+  $('#pbX',el).onclick=()=>{PB=null;LS.del('sh-pb');toast('Kalem tuşu ayarı silindi');};
+  $('#pbK',el).onclick=()=>{document.removeEventListener('keydown',kd,true);close()};
+  el.parentNode.addEventListener('click',e=>{if(e.target===el.parentNode)document.removeEventListener('keydown',kd,true)});
+});}
 function segDist(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy;let t=l?((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l:0;t=Math.max(0,Math.min(1,t));return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy)}
 function rdp(P,e){if(P.length<3)return P.slice();let m=0,ix=0;const a=P[0],b=P[P.length-1];for(let i=1;i<P.length-1;i++){const d=segDist(P[i],a,b);if(d>m){m=d;ix=i}}if(m>e){const l=rdp(P.slice(0,ix+1),e),r=rdp(P.slice(ix),e);return l.slice(0,-1).concat(r)}return[a,b]}
 function angSnap(a,b){const dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy),an=Math.atan2(dy,dx),st=Math.PI/4,sn=Math.round(an/st)*st;return Math.abs(an-sn)<0.09?[a[0]+Math.cos(sn)*L,a[1]+Math.sin(sn)*L]:b}
@@ -387,54 +422,83 @@ function recognize(p){
   if(n>=5&&n<=8)return{k:'p',p:s.flat(),closed:1,name:'Çokgen'};
   return null;
 }
+function mkShape(k,x0,y0,x,y){const L=[x0,y0,...angSnap([x0,y0],[x,y])];
+  if(k==='line'||k==='dash')return{k:'p',p:L};if(k==='arrow')return{k:'p',p:L,ar:1};
+  if(k==='rect')return{k:'p',p:[x0,y0,x,y0,x,y,x0,y],closed:1};
+  if(k==='circle'){const r=Math.hypot(x-x0,y-y0);return{k:'e',cx:x0,cy:y0,rx:r,ry:r}}
+  if(k==='tri')return{k:'p',p:[(x0+x)/2,y0,x,y,x0,y],closed:1};
+  return{k:'p',p:[x0,y0,x0,y,x,y],closed:1}}
+function arrowHead(x,q,w){const n=q.length,x1=q[n-4],y1=q[n-3],x2=q[n-2],y2=q[n-1],a=Math.atan2(y2-y1,x2-x1),L=Math.max(12,w*3.5);x.setLineDash([]);x.beginPath();x.moveTo(x2-L*Math.cos(a-.45),y2-L*Math.sin(a-.45));x.lineTo(x2,y2);x.lineTo(x2-L*Math.cos(a+.45),y2-L*Math.sin(a+.45));x.stroke()}
+function txW(s){const L=String(s.s).split('\n');return[Math.max(...L.map(l=>l.length))*s.w*.58,(L.length-1)*s.w*1.25]}
+function pts(s){if(s.t==='tx'){const[mw,h]=txW(s);return[[s.x,s.y-s.w],[s.x+mw,s.y+h+s.w*.3],[s.x+mw/2,s.y-s.w/2+h/2]]}
+  if(s.sh){const h=s.sh;if(h.k==='e')return[[h.cx-h.rx,h.cy],[h.cx+h.rx,h.cy],[h.cx,h.cy-h.ry],[h.cx,h.cy+h.ry],[h.cx,h.cy]];const o=[];for(let i=0;i<h.p.length;i+=2)o.push([h.p[i],h.p[i+1]]);return o}
+  const o=[];for(let i=0;i<s.p.length;i+=3)o.push([s.p[i],s.p[i+1]]);return o}
+function trS(s,dx,dy){if(s.t==='tx'){s.x+=dx;s.y+=dy}else if(s.sh){if(s.sh.k==='e'){s.sh.cx+=dx;s.sh.cy+=dy}else for(let i=0;i<s.sh.p.length;i+=2){s.sh.p[i]+=dx;s.sh.p[i+1]+=dy}}else for(let i=0;i<s.p.length;i+=3){s.p[i]+=dx;s.p[i+1]+=dy}}
+function inPoly(x,y,P){let c=false;for(let i=0,j=P.length-2;i<P.length;j=i,i+=2){const xi=P[i],yi=P[i+1],xj=P[j],yj=P[j+1];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi||1e-9)+xi)c=!c}return c}
+function selBox(L){let a=1e9,b=1e9,c=-1e9,d=-1e9;L.forEach(s=>{const m=(s.t==='tx'?0:s.w/2)+6;pts(s).forEach(([x,y])=>{a=Math.min(a,x-m);b=Math.min(b,y-m);c=Math.max(c,x+m);d=Math.max(d,y+m)})});return[a,b,c,d]}
 function shapePath(x,h){x.beginPath();if(h.k==='e')x.ellipse(h.cx,h.cy,Math.max(h.rx,.5),Math.max(h.ry,.5),0,0,Math.PI*2);else{const q=h.p;x.moveTo(q[0],q[1]);for(let i=2;i<q.length;i+=2)x.lineTo(q[i],q[i+1]);if(h.closed)x.closePath()}}
 function smooth(x,p){const n=p.length/3;x.beginPath();x.moveTo(p[0],p[1]);if(n===1){x.lineTo(p[0]+.05,p[1]);return}for(let i=1;i<n-1;i++)x.quadraticCurveTo(p[i*3],p[i*3+1],(p[i*3]+p[i*3+3])/2,(p[i*3+1]+p[i*3+4])/2);x.lineTo(p[(n-1)*3],p[(n-1)*3+1])}
 function drawStroke(x,s,live){
-  x.save();x.lineCap='round';x.lineJoin='round';
+  if(s.hide)return;
+  if(s.t==='tx'){x.save();x.fillStyle=s.c;x.font=`700 ${s.w}px Manrope,system-ui,sans-serif`;String(s.s).split('\n').forEach((L,i)=>x.fillText(L,s.x,s.y+i*s.w*1.25));x.restore();return}
+  x.save();x.lineCap='round';x.lineJoin='round';if(s.d)x.setLineDash([s.w*2.6,s.w*2.2]);
   if(s.t==='er'){x.globalCompositeOperation='destination-out';x.strokeStyle='#000'}else{x.strokeStyle=s.c}
   if(s.t==='hl'&&!live)x.globalAlpha=.4;
   if(s.t==='pencil')x.globalAlpha=.85;
   const w=s.w;
-  if(s.sh){x.lineWidth=s.t==='pen'?w*.95:w;shapePath(x,s.sh);x.stroke()}
+  if(s.sh){x.lineWidth=s.t==='pen'?w*.95:w;shapePath(x,s.sh);x.stroke();if(s.sh.ar)arrowHead(x,s.sh.p,w)}
   else if(s.t==='pen'){const p=s.p,n=p.length/3;if(n<3){x.lineWidth=w*(p[2]||1);smooth(x,p);x.stroke()}else{let px=p[0],py=p[1];for(let i=1;i<n-1;i++){const mx=(p[i*3]+p[i*3+3])/2,my=(p[i*3+1]+p[i*3+4])/2;x.beginPath();x.moveTo(px,py);x.quadraticCurveTo(p[i*3],p[i*3+1],mx,my);x.lineWidth=w*p[i*3+2];x.stroke();px=mx;py=my}x.beginPath();x.moveTo(px,py);x.lineTo(p[(n-1)*3],p[(n-1)*3+1]);x.lineWidth=w*p[(n-1)*3+2];x.stroke()}}
   else{x.lineWidth=s.t==='pencil'?w*.8:w;if(s.t==='hl')x.lineCap='square';smooth(x,s.p);x.stroke()}
   x.restore();
 }
-function hitStroke(s,X,Y,r){r+=s.w/2;const pt=[X,Y];if(s.sh){if(s.sh.k==='e'){for(let i=0;i<48;i++){const t=i/48*Math.PI*2;if(Math.hypot(s.sh.cx+Math.cos(t)*s.sh.rx-X,s.sh.cy+Math.sin(t)*s.sh.ry-Y)<r)return true}return false}const q=s.sh.p,m=q.length/2;for(let i=0;i<m-1+(s.sh.closed?1:0);i++){const j=(i+1)%m;if(segDist(pt,[q[i*2],q[i*2+1]],[q[j*2],q[j*2+1]])<r)return true}return false}
+function hitStroke(s,X,Y,r){if(s.t==='tx'){const[mw,h]=txW(s);return X>=s.x-r&&X<=s.x+mw+r&&Y>=s.y-s.w-r&&Y<=s.y+h+s.w*.3+r}r+=s.w/2;const pt=[X,Y];if(s.sh){if(s.sh.k==='e'){for(let i=0;i<48;i++){const t=i/48*Math.PI*2;if(Math.hypot(s.sh.cx+Math.cos(t)*s.sh.rx-X,s.sh.cy+Math.sin(t)*s.sh.ry-Y)<r)return true}return false}const q=s.sh.p,m=q.length/2;for(let i=0;i<m-1+(s.sh.closed?1:0);i++){const j=(i+1)%m;if(segDist(pt,[q[i*2],q[i*2+1]],[q[j*2],q[j*2+1]])<r)return true}return false}
   const p=s.p;if(p.length===3)return Math.hypot(p[0]-X,p[1]-Y)<r;for(let i=3;i<p.length;i+=3)if(segDist(pt,[p[i-3],p[i-2]],[p[i],p[i+1]])<r)return true;return false}
 
-const DEF_T={pen:{c:'#0A0F3C',w:4},ball:{c:'#2742F5',w:3},pencil:{c:'#4A4F6A',w:2.5},hl:{c:'#FFE14D',w:22},er:{w:24,m:'part'}};
+const DEF_T={pen:{c:'#0A0F3C',w:4},ball:{c:'#2742F5',w:3},pencil:{c:'#4A4F6A',w:2.5},hl:{c:'#FFE14D',w:22},er:{w:24,m:'part'},shape:{c:'#2742F5',w:3,k:'line'},text:{c:'#0A0F3C',w:30}};
 let TS=Object.assign(JSON.parse(JSON.stringify(DEF_T)),LS.get('sh-tools',{}));
-let OPT=Object.assign({shape:true,fingerDraw:false},LS.get('sh-opt',{}));
+let OPT=Object.assign({shape:true,fingerDraw:false,stab:false,bg:''},LS.get('sh-opt',{}));
 let tool=LS.get('sh-tool','pen'),penSeen=LS.get('sh-pen',false);
 
 class Ink{
-  constructor(page){this.page=page;this.gc=this.mk('gh');this.mc=this.mk('mn');this.lc=this.mk('lv');this.strokes=[];this.U=[];this.R=[];this.ghost=[];this.cur=null;this.dirty=false;this.hu=1000}
+  constructor(page){this.page=page;this.gc=this.mk('gh');this.mc=this.mk('mn');this.lc=this.mk('lv');this.strokes=[];this.U=[];this.R=[];this.ghost=[];this.lz=[];this.sel=null;this.cur=null;this.dirty=false;this.hu=1000}
   mk(c){const e=document.createElement('canvas');e.className=c;this.page.appendChild(e);return e}
   resize(){const w=this.page.offsetWidth,h=this.page.offsetHeight;if(!w||!h)return;this.hu=h/w*1000;const d=Math.min(3,Math.max(1,Math.sqrt(1e7/(w*h))));[this.gc,this.mc,this.lc].forEach(c=>{c.width=Math.round(w*d);c.height=Math.round(h*d)});this.k=this.mc.width/1000;this.redraw()}
   cx(c){const x=c.getContext('2d');x.setTransform(this.k,0,0,this.k,0,0);return x}
   redraw(){const g=this.cx(this.gc);g.clearRect(0,0,1000,this.hu);this.ghost.forEach(s=>drawStroke(g,s));const m=this.cx(this.mc);m.clearRect(0,0,1000,this.hu);this.strokes.forEach(s=>drawStroke(m,s))}
   pt(e){const r=this.mc.getBoundingClientRect();return[(e.clientX-r.left)/r.width*1000,(e.clientY-r.top)/r.width*1000]}
   down(e){
-    const tool=penEr(e)?'er':window.tool_();
-    const [x,y]=this.pt(e);this.lastT=e.timeStamp;this.vf=1;this.anchor=[e.clientX,e.clientY];this.isPen=e.pointerType==='pen';
+    this.btnEr=penEr(e);const tool=this.btnEr?'er':window.tool_();this.s0=null;
+    const [x,y]=this.pt(e);this.lastT=e.timeStamp;this.vf=1;this.anchor=[e.clientX,e.clientY];this.isPen=e.pointerType==='pen';this.raw=[x,y];
+    this.lc.classList.toggle('hl',tool==='hl');
+    if(tool==='lasso'){const b=this.selBox;if(this.sel&&b&&x>b[0]&&x<b[2]&&y>b[1]&&y<b[3])this.cur={t:'lm',lx:x,ly:y,dx:0,dy:0};else{this.sel=null;this.placeBar();this.cur={t:'ls',p:[x,y]}}this.live();return}
+    if(tool==='text'){this.cur={t:'txp',x,y};return}
+    if(tool==='laser'){this.cur={t:'lz'};this.lz.push(null,[x,y,performance.now()]);this.live();return}
+    if(tool==='shape'){const t=TS.shape;this.s0=[x,y];this.cur={t:'ball',c:t.c,w:t.w,sh:mkShape(t.k,x,y,x,y)};if(t.k==='dash')this.cur.d=1;this.live();return}
     if(tool==='er'&&TS.er.m==='stroke'){this.cur={t:'se'};this.eraseAt(x,y);return}
     const t=TS[tool];this.cur={t:tool,c:t.c,w:t.w,p:[x,y,this.f(e,0)]};
-    this.lc.classList.toggle('hl',tool==='hl');this.arm();this.live();
+    this.arm();this.live();
   }
   f(e,dist){if(this.cur&&this.cur.t!=='pen')return 1;if(e.pointerType==='pen'&&e.pressure>0)return +(0.3+e.pressure*1.15).toFixed(2);const dt=Math.max(1,e.timeStamp-this.lastT),v=dist/dt,tg=Math.min(1.3,Math.max(.55,1.3-v*.3));this.vf=this.vf*.7+tg*.3;return +this.vf.toFixed(2)}
   move(e){
     const c=this.cur;if(!c)return;
+    if(e.pointerType!=='touch'&&!this.s0&&['pen','ball','pencil','hl','er','se'].includes(c.t)&&penEr(e)!==this.btnEr){this.up();this.down(e);return}
     const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];
     for(const ev of(evs.length?evs:[e])){
-      const [x,y]=this.pt(ev);
+      let [x,y]=this.pt(ev);this.raw=[x,y];
+      if(c.t==='lz'){this.lz.push([x,y,performance.now()]);continue}
+      if(c.t==='ls'){c.p.push(x,y);continue}
+      if(c.t==='lm'){const dx=x-c.lx,dy=y-c.ly;c.lx=x;c.ly=y;c.dx+=dx;c.dy+=dy;this.sel.forEach(s=>trS(s,dx,dy));this.mv=1;continue}
+      if(c.t==='txp')continue;
+      if(this.s0){c.sh=mkShape(TS.shape.k,this.s0[0],this.s0[1],x,y);continue}
       if(c.t==='se'){this.eraseAt(x,y);continue}
+      if(OPT.stab&&c.p&&c.t!=='er'){const p=c.p,a=p[p.length-3],b=p[p.length-2];x=a+(x-a)*.38;y=b+(y-b)*.38}
       if(c.sh){if(c.sh.line){const q=c.sh.p;const b=angSnap([q[0],q[1]],[x,y]);q[2]=b[0];q[3]=b[1]}continue}
       const p=c.p,lx=p[p.length-3],ly=p[p.length-2],d=Math.hypot(x-lx,y-ly);if(d<.7)continue;
       const fv=this.f(ev,d);this.lastT=ev.timeStamp;p.push(+x.toFixed(1),+y.toFixed(1),fv);
       if(c.t==='er'){const m=this.cx(this.mc);drawStroke(m,{t:'er',w:c.w,p:[lx,ly,1,x,y,1]})}
     }
-    if(c.t!=='se'&&!c.sh&&Math.hypot(e.clientX-this.anchor[0],e.clientY-this.anchor[1])>7){this.anchor=[e.clientX,e.clientY];this.arm()}
+    if(this.mv){this.mv=0;this.redraw()}
+    if(c.p&&c.t!=='se'&&!c.sh&&Math.hypot(e.clientX-this.anchor[0],e.clientY-this.anchor[1])>7){this.anchor=[e.clientX,e.clientY];this.arm()}
     this.live();
   }
   arm(){clearTimeout(this.ht);const c=this.cur;if(!OPT.shape||!c||c.t==='er'||c.t==='se'||c.sh)return;this.ht=setTimeout(()=>this.snap(),480)}
@@ -442,17 +506,51 @@ class Ink{
     const fx=document.createElement('div');fx.className='snapfx';const r=this.page.getBoundingClientRect(),vr=this.page.parentNode.getBoundingClientRect();fx.style.left=(this.anchor[0]-vr.left)+'px';fx.style.top=(this.anchor[1]-vr.top)+'px';this.page.parentNode.appendChild(fx);setTimeout(()=>fx.remove(),500);
     const tag=$('#shapeTag');if(tag){tag.textContent=h.name;tag.hidden=false;clearTimeout(this.tt);this.tt=setTimeout(()=>tag.hidden=true,1200)}
     if(navigator.vibrate)try{navigator.vibrate(12)}catch(e){}}
-  live(){if(this.raf)return;this.raf=requestAnimationFrame(()=>{this.raf=0;const l=this.cx(this.lc);l.clearRect(0,0,1000,this.hu);const c=this.cur;if(c&&c.t!=='er'&&c.t!=='se')drawStroke(l,c,true)})}
+  live(){if(this.raf)return;this.raf=requestAnimationFrame(()=>{this.raf=0;const l=this.cx(this.lc);l.clearRect(0,0,1000,this.hu);const c=this.cur;
+    if(c&&c.t==='ls'){l.save();l.setLineDash([8,6]);l.lineWidth=2;l.strokeStyle='#2742F5';l.beginPath();for(let i=0;i<c.p.length;i+=2)i?l.lineTo(c.p[i],c.p[i+1]):l.moveTo(c.p[0],c.p[1]);l.stroke();l.restore()}
+    else if(c&&!['er','se','lz','lm','txp'].includes(c.t))drawStroke(l,c,true);
+    if(this.sel){const b=this.selBox=selBox(this.sel);l.save();l.setLineDash([7,5]);l.lineWidth=2;l.strokeStyle='#2742F5';l.fillStyle='rgba(39,66,245,.07)';l.fillRect(b[0],b[1],b[2]-b[0],b[3]-b[1]);l.strokeRect(b[0],b[1],b[2]-b[0],b[3]-b[1]);l.restore();this.placeBar()}
+    if(this.lz.length){const now=performance.now();this.lz=this.lz.filter(p=>p===null||now-p[2]<900);if(!this.lz.some(Boolean))this.lz=[];
+      l.save();l.lineCap='round';l.lineJoin='round';for(let i=1;i<this.lz.length;i++){const a=this.lz[i-1],b=this.lz[i];if(!a||!b)continue;const al=Math.max(0,1-(now-b[2])/900);l.shadowColor='#FF2D55';l.shadowBlur=14;l.strokeStyle=`rgba(255,45,85,${al})`;l.lineWidth=6;l.beginPath();l.moveTo(a[0],a[1]);l.lineTo(b[0],b[1]);l.stroke();l.shadowBlur=0;l.strokeStyle=`rgba(255,255,255,${al})`;l.lineWidth=2;l.stroke()}l.restore();
+      if(this.lz.length)this.live()}})}
   up(){clearTimeout(this.ht);const c=this.cur;this.cur=null;if(!c)return;
+    if(c.t==='lz')return;
+    if(c.t==='ls'){const L=c.p.length>=8?this.strokes.filter(s=>{const P=pts(s);return P.filter(([x,y])=>inPoly(x,y,c.p)).length>=P.length/2}):[];this.sel=L.length?L:null;if(!this.sel)this.placeBar();this.live();return}
+    if(c.t==='lm'){if(c.dx||c.dy){this.U.push({o:'m',l:this.sel.slice(),dx:c.dx,dy:c.dy});this.R=[];this.dirty=true}this.live();return}
+    if(c.t==='txp'){textAt(this,c.x,c.y);return}
+    if(this.s0){const b=selBox([c]);this.s0=null;if(b[2]-b[0]<c.w+16&&b[3]-b[1]<c.w+16){this.live();return}}
+    if(OPT.stab&&c.p&&c.t!=='er'&&this.raw)c.p.push(+this.raw[0].toFixed(1),+this.raw[1].toFixed(1),c.p[c.p.length-1]);
     if(c.t!=='se'){this.strokes.push(c);this.U.push({o:'a',s:c});this.R=[];if(c.t!=='er')drawStroke(this.cx(this.mc),c);this.dirty=true}
-    const l=this.cx(this.lc);l.clearRect(0,0,1000,this.hu)}
-  cancel(){clearTimeout(this.ht);this.cur=null;const l=this.cx(this.lc);l.clearRect(0,0,1000,this.hu);this.redraw()}
+    this.live()}
+  cancel(){clearTimeout(this.ht);this.cur=null;this.s0=null;this.redraw();this.live()}
+  placeBar(){const vp=$('#vp');let b=$('#selBar');if(!this.sel||!vp){if(b)b.remove();return}
+    if(!b){b=document.createElement('div');b.id='selBar';b.className='selbar';b.innerHTML='<button data-a="del">🗑 Sil</button><button data-a="dup">⧉ Çoğalt</button><button data-a="ok">✓ Bitti</button>';vp.appendChild(b);b.onclick=e=>{const a=(e.target.closest('button')||{}).dataset;if(!a)return;if(a.a==='del')this.selDel();else if(a.a==='dup')this.selDup();else this.selClear()}}
+    const r=this.mc.getBoundingClientRect(),vr=vp.getBoundingClientRect(),k=r.width/1000,B=this.selBox||selBox(this.sel);let t=r.top-vr.top+B[1]*k-50;if(t<6)t=r.top-vr.top+B[3]*k+8;
+    b.style.left=Math.max(6,Math.min(vr.width-230,r.left-vr.left+B[0]*k))+'px';b.style.top=Math.min(vr.height-50,t)+'px'}
+  selClear(){if(!this.sel)return;this.sel=null;this.selBox=null;this.placeBar();this.live()}
+  selDel(){const a=this.strokes.slice();this.strokes=a.filter(s=>!this.sel.includes(s));this.U.push({o:'r',a,b:this.strokes.slice()});this.R=[];this.dirty=true;this.sel=null;this.redraw();this.placeBar();this.live()}
+  selDup(){const cl=this.sel.map(s=>JSON.parse(JSON.stringify(s)));cl.forEach(s=>trS(s,24,24));const a=this.strokes.slice();this.strokes.push(...cl);this.U.push({o:'r',a,b:this.strokes.slice()});this.R=[];this.dirty=true;this.sel=cl;this.redraw();this.live()}
   eraseAt(x,y){const r=TS.er.w/2;for(let i=this.strokes.length-1;i>=0;i--){const s=this.strokes[i];if(s.t==='er')continue;if(hitStroke(s,x,y,r)){this.strokes.splice(i,1);this.U.push({o:'d',s,i});this.R=[];this.dirty=true;this.redraw();return}}}
-  undo(){const e=this.U.pop();if(!e)return;if(e.o==='a')this.strokes.splice(this.strokes.lastIndexOf(e.s),1);else if(e.o==='d')this.strokes.splice(e.i,0,e.s);else this.strokes=e.l;this.R.push(e);this.dirty=true;this.redraw()}
-  redo(){const e=this.R.pop();if(!e)return;if(e.o==='a')this.strokes.push(e.s);else if(e.o==='d')this.strokes.splice(e.i,1);else{e.l=this.strokes;this.strokes=[]}this.U.push(e);this.dirty=true;this.redraw()}
-  clear(){if(!this.strokes.length)return;this.U.push({o:'c',l:this.strokes});this.strokes=[];this.R=[];this.dirty=true;this.redraw()}
-  data(){const r=v=>Math.round(v);return this.strokes.map(s=>{const o={t:s.t,w:s.w};if(s.c)o.c=s.c;if(s.sh){const h={...s.sh};if(h.p)h.p=h.p.map(r);['cx','cy','rx','ry'].forEach(k=>{if(h[k]!=null)h[k]=r(h[k])});delete h.name;o.sh=h}else o.p=s.p.map((v,i)=>i%3===2?v:r(v));return o})}
+  undo(){const e=this.U.pop();if(!e)return;this.sel=null;if(e.o==='a'){const i=this.strokes.lastIndexOf(e.s);if(i>=0)this.strokes.splice(i,1)}else if(e.o==='d')this.strokes.splice(e.i,0,e.s);else if(e.o==='m')e.l.forEach(s=>trS(s,-e.dx,-e.dy));else if(e.o==='r')this.strokes=e.a.slice();else this.strokes=e.l;this.R.push(e);this.dirty=true;this.redraw();this.placeBar();this.live()}
+  redo(){const e=this.R.pop();if(!e)return;this.sel=null;if(e.o==='a')this.strokes.push(e.s);else if(e.o==='d')this.strokes.splice(e.i,1);else if(e.o==='m')e.l.forEach(s=>trS(s,e.dx,e.dy));else if(e.o==='r')this.strokes=e.b.slice();else{e.l=this.strokes;this.strokes=[]}this.U.push(e);this.dirty=true;this.redraw();this.placeBar();this.live()}
+  clear(){if(!this.strokes.length)return;this.sel=null;this.placeBar();this.U.push({o:'c',l:this.strokes});this.strokes=[];this.R=[];this.dirty=true;this.redraw()}
+  data(){const r=v=>Math.round(v);return this.strokes.map(s=>{if(s.t==='tx')return{t:'tx',c:s.c,w:s.w,x:r(s.x),y:r(s.y),s:s.s};const o={t:s.t,w:s.w};if(s.c)o.c=s.c;if(s.d)o.d=1;if(s.sh){const h={...s.sh};if(h.p)h.p=h.p.map(r);['cx','cy','rx','ry'].forEach(k=>{if(h[k]!=null)h[k]=r(h[k])});delete h.name;o.sh=h}else o.p=s.p.map((v,i)=>i%3===2?v:r(v));return o})}
 }
+
+function textAt(ink,x,y){const vp=$('#vp');if(!vp)return;let old=null;for(let i=ink.strokes.length-1;i>=0;i--){const s=ink.strokes[i];if(s.t==='tx'&&hitStroke(s,x,y,4)){old=s;break}}
+  const t=TS.text,r=ink.mc.getBoundingClientRect(),vr=vp.getBoundingClientRect(),k=r.width/1000,sx=old?old.x:x,sy=old?old.y:y,w=old?old.w:t.w,c=old?old.c:t.c;
+  const ta=document.createElement('textarea');ta.className='txin';ta.value=old?old.s:'';ta.rows=1;ta.setAttribute('aria-label','Yazı');
+  ta.style.cssText=`left:${r.left-vr.left+sx*k-6}px;top:${r.top-vr.top+(sy-w*1.02)*k-2}px;font-size:${w*k}px;color:${c}`;
+  if(old){old.hide=1;ink.redraw()}vp.appendChild(ta);const gr=()=>{ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';ta.style.width=Math.max(120,ta.scrollWidth+8)+'px'};gr();ta.oninput=gr;setTimeout(()=>ta.focus(),40);
+  let done=false;const fin=ok=>{if(done)return;done=true;const v=ta.value.replace(/\s+$/,'');ta.remove();
+    if(old){delete old.hide;if(ok&&v!==old.s){const a=ink.strokes.slice(),n={t:'tx',c,w,x:sx,y:sy,s:v},b=v?a.map(s=>s===old?n:s):a.filter(s=>s!==old);ink.strokes=b.slice();ink.U.push({o:'r',a,b});ink.R=[];ink.dirty=true}}
+    else if(ok&&v){const n={t:'tx',c,w,x:sx,y:sy,s:v};ink.strokes.push(n);ink.U.push({o:'a',s:n});ink.R=[];ink.dirty=true}ink.redraw()};
+  ta.onblur=()=>fin(true);ta.onkeydown=e=>{e.stopPropagation();if(e.key==='Escape')fin(false);else if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ta.blur()}}}
+async function pngKaydet(){const page=$('#page');if(!page)return;const r=page.getBoundingClientRect(),s=T.g.s,W=page.offsetWidth,H=page.offsetHeight,d=2;
+  const c=document.createElement('canvas');c.width=W*d;c.height=H*d;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+  page.querySelectorAll('img').forEach(im=>{const b=im.getBoundingClientRect();try{x.drawImage(im,(b.left-r.left)/s*d,(b.top-r.top)/s*d,b.width/s*d,b.height/s*d)}catch(e){}});
+  x.drawImage(T.ink.mc,0,0,c.width,c.height);
+  try{c.toBlob(b=>{if(!b){toast('Kaydedilemedi');return}const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='cozum-'+T.q.id+'.png';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);toast('Resim indirildi')},'image/png')}catch(e){toast('Kaydedilemedi')}}
 
 /* ================= yakınlaştırma / kaydırma ================= */
 class Gest{
@@ -460,14 +558,16 @@ class Gest{
     vp.addEventListener('pointerdown',e=>this.down(e));vp.addEventListener('pointermove',e=>this.move(e));['pointerup','pointercancel','lostpointercapture'].forEach(n=>vp.addEventListener(n,e=>this.up(e)));
     vp.addEventListener('wheel',e=>{e.preventDefault();if(e.ctrlKey){const r=vp.getBoundingClientRect();this.zoomAt(this.s*Math.exp(-e.deltaY*.01),e.clientX-r.left,e.clientY-r.top)}else{this.tx-=e.deltaX;this.ty-=e.deltaY;this.fix()}},{passive:false});}
   zoomAt(s,cx,cy){s=Math.min(5,Math.max(1,s));this.tx=cx-(cx-this.tx)*s/this.s;this.ty=cy-(cy-this.ty)*s/this.s;this.s=s;this.fix()}
-  down(e){try{this.vp.setPointerCapture(e.pointerId)}catch(_){}this.P.set(e.pointerId,{x:e.clientX,y:e.clientY,t:e.pointerType});
+  down(e){if(e.target.closest&&e.target.closest('.txin,.selbar'))return;try{this.vp.setPointerCapture(e.pointerId)}catch(_){}
+    if(e.pointerType==='touch'){if(![...this.P.values()].some(p=>p.t==='touch'))this.tg={t0:e.timeStamp,max:0,mv:0,ok:true}}else if(this.tg)this.tg.ok=false;
+    this.P.set(e.pointerId,{x:e.clientX,y:e.clientY,t:e.pointerType});if(this.tg&&e.pointerType==='touch')this.tg.max=Math.max(this.tg.max,[...this.P.values()].filter(p=>p.t==='touch').length);
     const T=[...this.P.entries()].filter(([,p])=>p.t==='touch');
     if(this.mode==='draw'&&this.dType==='pen')return;
     if(e.pointerType==='touch'&&T.length>=2){if(this.mode==='draw')this.h.cancel();this.mode='pinch';this.ids=T.slice(0,2).map(t=>t[0]);const[a,b]=this.ids.map(i=>this.P.get(i));this.z={d:Math.hypot(a.x-b.x,a.y-b.y)||1,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,s:this.s,tx:this.tx,ty:this.ty};return}
     if(this.mode)return;
-    if(e.button>0&&!(e.pointerType==='pen'&&penEr(e)))return;
+    if(e.button>0&&!penEr(e))return;
     if(this.h.canDraw(e)){this.mode='draw';this.dId=e.pointerId;this.dType=e.pointerType;this.h.down(e)}else{this.mode='pan';this.pId=e.pointerId;this.p0={x:e.clientX,y:e.clientY,tx:this.tx,ty:this.ty}}}
-  move(e){const p=this.P.get(e.pointerId);if(!p)return;p.x=e.clientX;p.y=e.clientY;
+  move(e){const p=this.P.get(e.pointerId);if(!p)return;if(this.tg&&p.t==='touch')this.tg.mv+=Math.hypot(e.clientX-p.x,e.clientY-p.y);p.x=e.clientX;p.y=e.clientY;
     if(this.mode==='draw'&&e.pointerId===this.dId)this.h.move(e);
     else if(this.mode==='pan'&&e.pointerId===this.pId){this.tx=this.p0.tx+e.clientX-this.p0.x;this.ty=this.p0.ty+e.clientY-this.p0.y;this.fix()}
     else if(this.mode==='pinch'&&this.ids.includes(e.pointerId)){const[a,b]=this.ids.map(i=>this.P.get(i));const r=this.vp.getBoundingClientRect(),z=this.z;const s=Math.min(5,Math.max(1,z.s*Math.hypot(a.x-b.x,a.y-b.y)/z.d));const cx=(a.x+b.x)/2-r.left,cy=(a.y+b.y)/2-r.top,c0x=z.cx-r.left,c0y=z.cy-r.top;this.tx=cx-(c0x-z.tx)*s/z.s;this.ty=cy-(c0y-z.ty)*s/z.s;this.s=s;this.fix()}}
@@ -475,8 +575,9 @@ class Gest{
     if(this.mode==='draw'&&e.pointerId===this.dId){this.h.up(e);this.mode=null}
     else if(this.mode==='pan'&&e.pointerId===this.pId)this.mode=null;
     else if(this.mode==='pinch'&&this.ids.includes(e.pointerId))this.mode=this.P.size?'wait':null;
-    if(this.mode==='wait'&&!this.P.size)this.mode=null;}
-  fix(){const vw=this.vp.clientWidth,vh=this.vp.clientHeight,W=this.page.offsetWidth*this.s,H=this.page.offsetHeight*this.s;this.tx=W<=vw?(vw-W)/2:Math.min(0,Math.max(vw-W,this.tx));this.ty=H<=vh?Math.max(0,Math.min(this.ty,vh-H))*0:Math.min(0,Math.max(vh-H,this.ty));this.page.style.transform=`translate(${this.tx}px,${this.ty}px) scale(${this.s})`;const z=$('#zoomTag');if(z){z.hidden=this.s<1.05;z.textContent=Math.round(this.s*100)+'% · sıfırla'}}
+    if(this.mode==='wait'&&!this.P.size)this.mode=null;
+    const g=this.tg;if(g&&![...this.P.values()].some(p=>p.t==='touch')){this.tg=null;if(g.ok&&g.max>=2&&g.mv<40&&e.timeStamp-g.t0<380&&this.h.tap)this.h.tap(g.max)}}
+  fix(){const vw=this.vp.clientWidth,vh=this.vp.clientHeight,W=this.page.offsetWidth*this.s,H=this.page.offsetHeight*this.s;this.tx=W<=vw?(vw-W)/2:Math.min(0,Math.max(vw-W,this.tx));this.ty=H<=vh?Math.max(0,Math.min(this.ty,vh-H))*0:Math.min(0,Math.max(vh-H,this.ty));this.page.style.transform=`translate(${this.tx}px,${this.ty}px) scale(${this.s})`;if(this.h.moved)this.h.moved();const z=$('#zoomTag');if(z){z.hidden=this.s<1.05;z.textContent=Math.round(this.s*100)+'% · sıfırla'}}
   reset(){this.s=1;this.tx=0;this.ty=0;this.fix()}
 }
 
@@ -488,15 +589,22 @@ const IC={
  hl:'<path d="M9 14l7-10 4 3-7 10z"/><path d="M9 14l-1 4 4-1M4 21h9"/>',
  er:'<path d="M7 21h12"/><path d="M4 15l9-10 7 7-8 9H9z"/><path d="M8 10l7 7"/>',
  hand:'<path d="M8 13V6a1.5 1.5 0 013 0v5M11 11V4.5a1.5 1.5 0 013 0V11M14 11V6.5a1.5 1.5 0 013 0V15a6 6 0 01-6 6h-1a6 6 0 01-5-2.7L3.5 14a1.5 1.5 0 012.6-1.5L8 15"/>',
+ lasso:'<path d="M12 4c5 0 8 2.5 8 5.5S16.5 15 12 15 4 12.5 4 9.5 7 4 12 4z" stroke-dasharray="3 2.5"/><path d="M7 13.5c-1 2-.5 4 1.5 4.5 1.5.4 1.5 2 .5 3"/>',
+ shape:'<path d="M3 20l5-9 5 9z"/><circle cx="17" cy="7" r="3.5"/>',
+ text:'<path d="M5 7V4h14v3M12 4v16M9 20h6"/>',
+ laser:'<path d="M4 20l7-7"/><circle cx="14.5" cy="9.5" r="2.5"/><path d="M14.5 3v2M14.5 14v2M21 9.5h-2M10 9.5H8M19 5l-1.4 1.4M19 14l-1.4-1.4"/>',
+ swap:'<path d="M6 8h12l-3-3M18 16H6l3 3"/>',
  undo:'<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-3"/>',
  redo:'<path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 000 10h3"/>',
  more:'<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>'
 };
-const TN={pen:'Dolma kalem',ball:'Tükenmez',pencil:'Kurşun kalem',hl:'Fosforlu',er:'Silgi',hand:'Kaydır'};
+const TN={pen:'Dolma kalem',ball:'Tükenmez',pencil:'Kurşun kalem',hl:'Fosforlu',er:'Silgi',lasso:'Seç ve taşı',shape:'Şekil',text:'Yazı',laser:'Lazer',hand:'Kaydır'};
 const svg=k=>`<svg viewBox="0 0 24 24">${IC[k]}</svg>`;
 function bindTools(){
   const tools=$('#tools'),tp=$('#tp');
-  tools.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const k=b.dataset.t;if(tool===k&&k!=='hand'){panel(tp.dataset.open===k?null:k)}else{tool=k;LS.set('sh-tool',k);tools.querySelectorAll('[data-t]').forEach(x=>x.setAttribute('aria-pressed',x===b));panel(null)}});
+  const HN={lasso:'Seçmek için çizimlerin etrafını çevir, sonra kutuyu sürükle.',laser:'Lazer iz bırakmaz, 1 saniyede söner.',hand:'Kalemle de kaydırırsın.'};
+  tools.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const k=b.dataset.t;if(tool===k&&TS[k]){panel(tp.dataset.open===k?null:k)}else{setTool(k);panel(null);if(HN[k])toast(HN[k])}});
+  $('#sB').onclick=erToggle;
   $('#uB').onclick=()=>T.ink.undo();$('#rB').onclick=()=>T.ink.redo();$('#mB').onclick=()=>panel(tp.dataset.open==='more'?null:'more');
 }
 function panel(k){
@@ -506,19 +614,26 @@ function panel(k){
   if(k==='more'){h=`<div class="tg"><span>Basılı tutunca şekli düzelt</span><button class="sw2" data-o="shape" role="switch" aria-checked="${OPT.shape}" aria-label="Şekil düzeltme"></button></div>
     <div class="tg"><span>Parmakla da çiz${penSeen?'':' (kalem görülmedi)'}</span><button class="sw2" data-o="fingerDraw" role="switch" aria-checked="${OPT.fingerDraw||!penSeen}" aria-label="Parmakla çiz" ${penSeen?'':'disabled'}></button></div>
     <div class="tg"><span>Eski çözümümü göster</span><button class="sw2" id="ghT" role="switch" aria-checked="${T.ink.ghost.length>0}" aria-label="Eski çözüm"></button></div>
-    <div class="row"><button class="btn ghost sm" id="zR">Yakınlaştırmayı sıfırla</button><button class="btn ghost sm" id="xA">Karalama alanını uzat</button></div>
-    <p style="margin:0;font-size:13px;color:var(--mute);font-weight:600">İki parmakla yakınlaştır ve kaydır. Çizgi, üçgen, çember çizip parmağını kaldırmadan yarım saniye bekle.</p>`}
+    <div class="tg"><span>Titreme düzeltici (daha düzgün yazı)</span><button class="sw2" data-o="stab" role="switch" aria-checked="${!!OPT.stab}" aria-label="Titreme düzeltici"></button></div>
+    <div class="lab">Karalama zemini</div><div class="seg">${[['','Noktalı'],['kare','Kareli'],['cizgi','Çizgili'],['bos','Boş']].map(([v,n])=>`<button data-bg="${v}" aria-pressed="${(OPT.bg||'')===v}">${n}</button>`).join('')}</div>
+    <div class="tg"><span>Kalem tuşu: <b>${PB?'öğretildi ✓':'otomatik'}</b></span><button class="btn ghost sm" id="pbO">Kalem tuşunu tanıt</button></div>
+    <div class="row"><button class="btn ghost sm" id="zR">Yakınlaştırmayı sıfırla</button><button class="btn ghost sm" id="xA">Karalama alanını uzat</button><button class="btn ghost sm" id="pngB">Resim olarak kaydet</button></div>
+    <p style="margin:0;font-size:13px;color:var(--mute);font-weight:600">İki parmakla dokun: geri al · üç parmakla dokun: yinele · ⇄ silgi/kalem değiştirir. Çizip yarım saniye beklersen şekil düzelir.</p>`}
   else if(k==='er'){h=`<div class="seg"><button data-m="part" aria-pressed="${TS.er.m==='part'}">Kısmi silgi</button><button data-m="stroke" aria-pressed="${TS.er.m==='stroke'}">Çizgiyi sil</button></div>
     <div class="sizer"><span class="lab">Boyut</span><input type="range" id="sz" min="8" max="80" step="1" value="${TS.er.w}" aria-label="Silgi boyutu"><canvas id="pv" width="220" height="80"></canvas></div>
     <button class="btn pink sm" id="clr">Sayfayı temizle</button>`}
-  else{const t=TS[k],P=k==='hl'?HPAL:PAL,mx=k==='hl'?48:k==='pencil'?10:18,mn=k==='hl'?8:1;
-    h=`<div class="lab">${TN[k]}</div><div class="sw">${P.map(c=>`<button data-c="${c}" style="background:${c}" aria-label="Renk ${c}" aria-pressed="${t.c.toLowerCase()===c.toLowerCase()}"></button>`).join('')}<label aria-label="Özel renk">＋<input type="color" id="cc" value="${t.c}"></label></div>
+  else{const t=TS[k],P=k==='hl'?HPAL:PAL,mx=k==='hl'?48:k==='pencil'?10:k==='text'?72:18,mn=k==='hl'?8:k==='text'?14:1,rc=LS.get('sh-rc',[]).filter(c=>!P.includes(c));
+    h=`<div class="lab">${TN[k]}</div>${k==='shape'?`<div class="seg shp">${[['line','／ Doğru'],['arrow','→ Ok'],['dash','┄ Kesikli'],['rect','▭ Dikdörtgen'],['circle','◯ Çember'],['tri','△ Üçgen'],['rtri','◺ Dik üçgen']].map(([v,n])=>`<button data-sk="${v}" aria-pressed="${t.k===v}">${n}</button>`).join('')}</div>`:''}${rc.length&&k!=='hl'?`<div class="sw">${rc.map(c=>`<button data-c="${c}" style="background:${c}" aria-label="Son renk ${c}" aria-pressed="${t.c.toLowerCase()===c.toLowerCase()}"></button>`).join('')}</div>`:''}<div class="sw">${P.map(c=>`<button data-c="${c}" style="background:${c}" aria-label="Renk ${c}" aria-pressed="${t.c.toLowerCase()===c.toLowerCase()}"></button>`).join('')}<label aria-label="Özel renk">＋<input type="color" id="cc" value="${t.c}"></label></div>
     <div class="sizer"><span class="lab">Kalınlık</span><input type="range" id="sz" min="${mn}" max="${mx}" step="0.5" value="${t.w}" aria-label="Kalınlık"><canvas id="pv" width="220" height="80"></canvas></div>`}
   tp.innerHTML=`<div class="tpanel" style="top:${top}px">${h}</div>`;
   const P=tp.firstChild,save=()=>{LS.set('sh-tools',TS);const cb=document.querySelector(`.tb[data-t="${k}"] .tcol`);if(cb&&TS[k].c)cb.style.background=TS[k].c;prev()};
-  const prev=()=>{const c=$('#pv',P);if(!c)return;const x=c.getContext('2d');x.clearRect(0,0,220,80);const s=k==='er'?{t:'ball',c:'#C9CEF0',w:TS.er.w*.9}:{t:k,c:TS[k].c,w:TS[k].w*2};const p=[];for(let i=0;i<=40;i++){const X=20+i*4.5,Y=40+Math.sin(i/40*Math.PI*2)*18;p.push(X,Y,k==='pen'?.6+Math.sin(i/40*Math.PI)*.6:1)}s.p=p;x.save();drawStroke(x,s);x.restore()};prev();
+  const prev=()=>{const c=$('#pv',P);if(!c)return;const x=c.getContext('2d');x.clearRect(0,0,220,80);if(k==='text'){x.fillStyle=TS.text.c;x.font=`700 ${Math.min(60,TS.text.w)}px Manrope,sans-serif`;x.fillText('Aa √3 x²',12,58);return}if(k==='shape'){drawStroke(x,{t:'ball',c:TS.shape.c,w:TS.shape.w,d:TS.shape.k==='dash'?1:0,sh:TS.shape.k==='circle'?{k:'e',cx:110,cy:40,rx:28,ry:28}:mkShape(TS.shape.k,60,14,160,66)});return}const s=k==='er'?{t:'ball',c:'#C9CEF0',w:TS.er.w*.9}:{t:k,c:TS[k].c,w:TS[k].w*2};const p=[];for(let i=0;i<=40;i++){const X=20+i*4.5,Y=40+Math.sin(i/40*Math.PI*2)*18;p.push(X,Y,k==='pen'?.6+Math.sin(i/40*Math.PI)*.6:1)}s.p=p;x.save();drawStroke(x,s);x.restore()};prev();
+  const addRc=c=>{let L=LS.get('sh-rc',[]).filter(x=>x!==c);L.unshift(c);LS.set('sh-rc',L.slice(0,8))};
+  P.querySelectorAll('[data-sk]').forEach(b=>b.onclick=()=>{TS.shape.k=b.dataset.sk;P.querySelectorAll('[data-sk]').forEach(x=>x.setAttribute('aria-pressed',x===b));save()});
+  P.querySelectorAll('[data-bg]').forEach(b=>b.onclick=()=>{OPT.bg=b.dataset.bg;LS.set('sh-opt',OPT);P.querySelectorAll('[data-bg]').forEach(x=>x.setAttribute('aria-pressed',x===b));const s=$('#scr');if(s)s.className='scratch '+OPT.bg});
+  const pbo=$('#pbO',P);if(pbo)pbo.onclick=()=>{panel(null);penOgret()};const pg=$('#pngB',P);if(pg)pg.onclick=()=>{panel(null);pngKaydet()};
   P.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{TS[k].c=b.dataset.c;P.querySelectorAll('[data-c]').forEach(x=>x.setAttribute('aria-pressed',x===b));save()});
-  const cc=$('#cc',P);if(cc)cc.oninput=e=>{TS[k].c=e.target.value;P.querySelectorAll('[data-c]').forEach(x=>x.setAttribute('aria-pressed','false'));save()};
+  const cc=$('#cc',P);if(cc){cc.onchange=e=>addRc(e.target.value);cc.oninput=e=>{TS[k].c=e.target.value;P.querySelectorAll('[data-c]').forEach(x=>x.setAttribute('aria-pressed','false'));save()}};
   const sz=$('#sz',P);if(sz)sz.oninput=e=>{TS[k].w=+e.target.value;save()};
   P.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{TS.er.m=b.dataset.m;P.querySelectorAll('[data-m]').forEach(x=>x.setAttribute('aria-pressed',x===b));save()});
   const clr=$('#clr',P);if(clr)clr.onclick=()=>{T.ink.clear();panel(null);toast('Sayfa temizlendi. Geri almak için ↶')};
@@ -831,15 +946,15 @@ async function openQ(){
   full.innerHTML=`<div class="full">
    <div class="fbar"><button class="x" id="qx" aria-label="Testten çık">✕</button><div class="pbar"><i id="pb" style="width:${T.i/T.ids.length*100}%"></i></div><span class="fmeta">${T.i+1}/${T.ids.length}</span>${den?'':`<span class="fmeta streak" id="stk">Seri ${T.streak}</span>`}<span class="fmeta timer" id="clk">0:00</span>${q.ipucu&&q.ipucu.length&&!den?`<button class="x hintbtn" id="hB" aria-label="İpucu al"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0012 3z"/></svg><span class="cnt">${q.ipucu.length}</span></button>`:''}</div>
    ${den?`<div class="optik" id="opt">${T.ids.map((id,i)=>`<button data-i="${i}" class="${T.ans[id]!=null?'dolu':''}${i===T.i?' cur':''}">${i+1}</button>`).join('')}</div>`:''}
-   <div class="tools" id="tools">${['pen','ball','pencil','hl','er','hand'].map(k=>`<button class="tb" data-t="${k}" aria-label="${TN[k]}" aria-pressed="${tool===k}">${svg(k)}${TS[k]&&TS[k].c?`<span class="tcol" style="background:${TS[k].c}"></span>`:''}</button>`).join('')}<span class="tsep"></span><button class="tb" id="uB" aria-label="Geri al">${svg('undo')}</button><button class="tb" id="rB" aria-label="Yinele">${svg('redo')}</button><button class="tb" id="mB" aria-label="Diğer ayarlar">${svg('more')}</button></div>
+   <div class="tools" id="tools">${['pen','ball','pencil','hl','er','lasso','shape','text','laser','hand'].map(k=>`<button class="tb" data-t="${k}" aria-label="${TN[k]}" aria-pressed="${tool===k}">${svg(k)}${TS[k]&&TS[k].c?`<span class="tcol" style="background:${TS[k].c}"></span>`:''}</button>`).join('')}<span class="tsep"></span><button class="tb${tool==='er'?' on2':''}" id="sB" aria-label="Silgi / kalem değiştir">${svg('swap')}</button><button class="tb" id="uB" aria-label="Geri al">${svg('undo')}</button><button class="tb" id="rB" aria-label="Yinele">${svg('redo')}</button><button class="tb" id="mB" aria-label="Diğer ayarlar">${svg('more')}</button></div>
    <div id="tp"></div><div class="hint2" id="hint"></div>
    <div class="vp" id="vp"><div class="page" id="page"></div><span class="hint" id="shapeTag" hidden></span><button class="zoomtag" id="zoomTag" hidden></button></div>
    <div class="abar" id="abar"></div></div>`;
   const vp=$('#vp'),page=$('#page');
-  page.innerHTML=qHTML(q)+`<div class="scratch" id="scr"><span>Karalama alanı</span></div>`;
+  page.innerHTML=qHTML(q)+`<div class="scratch ${OPT.bg||''}" id="scr"><span>Karalama alanı</span></div>`;
   fillImgs(page);
   T.ink=new Ink(page);
-  T.g=new Gest(vp,page,{canDraw:e=>{if(e.pointerType==='pen'&&!penSeen){penSeen=true;LS.set('sh-pen',true);toast('Kalem algılandı: kalemle yaz, parmakla kaydır.')}if(penEr(e))return true;if(tool==='hand')return false;if(e.pointerType==='touch'&&penSeen&&!OPT.fingerDraw)return false;return true},down:e=>T.ink.down(e),move:e=>T.ink.move(e),up:e=>T.ink.up(e),cancel:()=>T.ink.cancel()});
+  T.g=new Gest(vp,page,{canDraw:e=>{if(e.pointerType==='pen'&&!penSeen){penSeen=true;LS.set('sh-pen',true);toast('Kalem algılandı: kalemle yaz, parmakla kaydır.')}if(penEr(e))return true;if(tool==='hand')return false;if(e.pointerType==='pen')return true;if(e.pointerType==='touch'&&penSeen&&!OPT.fingerDraw)return false;return true},down:e=>T.ink.down(e),move:e=>T.ink.move(e),up:e=>T.ink.up(e),cancel:()=>T.ink.cancel(),tap:n=>{if(n===2){T.ink.undo();toast('↶ Geri alındı')}else{T.ink.redo();toast('↷ Yinelendi')}},moved:()=>{if(T.ink&&T.ink.sel)T.ink.placeBar()}});
   const lay=()=>{const vw=vp.clientWidth,vh=vp.clientHeight,yan=OPT.yan!==false&&vw>=860&&vw>vh*1.15;page.classList.toggle('yan',yan);page.style.width=vw+'px';
     const colW=yan?vw*.46:vw,qi=page.querySelector('.qimg');if(qi){const pw=q.pw||Math.min(1,(q.w||900)/1700);qi.style.width=Math.min(colW-32,Math.max(240,pw*Math.max(Math.min(yan?colW*1.5:colW,780),620)))+'px';const qc=qi.parentNode;qc.style.width=qi.style.width}
     const im=page.querySelector('.qwrap');const ch=im?im.offsetHeight:300;$('#scr').style.height=yan?Math.max(vh,ch)+'px':Math.max(vh*.85,ch*.9,360)+'px';T.ink.resize();T.g.fix()};
