@@ -299,6 +299,12 @@ table.ft{width:100%;border-collapse:collapse;font-size:13px}
 .zlog li{display:flex;gap:8px;justify-content:space-between;font:700 13px var(--body);color:var(--on-bg-mute);animation:sup2 .4s both}
 .zlog li.son{color:var(--on-bg)}.zlog li.son span::after{content:'';display:inline-block;width:6px;height:6px;margin-left:6px;border-radius:50%;background:var(--sun);animation:pulse 1s infinite;vertical-align:middle}
 .zlog time{flex:none;opacity:.7;font-variant-numeric:tabular-nums}
+/* ---------- kota ---------- */
+.kota{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;background:rgba(11,17,71,.55);border:2px solid var(--ink);border-radius:14px;padding:8px 12px;color:var(--on-bg);font:800 12px var(--body);cursor:pointer;text-align:left}
+.kota span{display:inline-flex;align-items:center;gap:6px}.kota i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--ink)}
+.kota .yn{margin-left:auto;color:var(--on-bg-mute)}
+.ln2{display:flex;justify-content:space-between;gap:10px;font-size:14px}.ln2 span{font-weight:800;font-variant-numeric:tabular-nums}
+.kn{color:var(--mute);font-weight:600;font-size:13px}
 /* ---------- anlatım oynatıcısı ---------- */
 .pl{position:fixed;inset:0;z-index:25;background:var(--bg);display:flex;flex-direction:column;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);animation:fade .25s both;overflow:auto}
 .pl .fbar b{flex:1;font:800 18px var(--display);color:var(--on-bg);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -546,6 +552,7 @@ const ghMsg=e=>!navigator.onLine?'İnternet bağlantısı yok.':e&&e.status===40
 let SQ=LS.get('sh2-sorular',[]);           // Python'un yazdığı sorular
 let PR=LS.get('sh2-ilerleme',null)||{v:1,q:{},gun:{},xp:0,rozet:[],hedef:30,yukleme:0};
 let DUR=LS.get('sh2-durum',{});
+let KOTA=LS.get('sh2-kota',{});
 const now=()=>Date.now();
 const gunK=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 /* matematik yazımı: \sqrt{3} -> √3, x^2 -> x² */
@@ -589,7 +596,8 @@ addEventListener('visibilitychange',()=>{if(document.hidden&&dirty)pushP()});
 async function pull(quiet){
   if(!CFG.token)return false;
   try{
-    const[s,p,d]=await Promise.all([GH.raw('sorular.json'),GH.meta('ilerleme.json'),GH.raw('durum.json')]);
+    const[s,p,d,k]=await Promise.all([GH.raw('sorular.json'),GH.meta('ilerleme.json'),GH.raw('durum.json'),GH.raw('kota.json').catch(()=>null)]);
+    if(k){try{KOTA=await k.json();LS.set('sh2-kota',KOTA)}catch(e){}}
     const old=new Set(SQ.map(q=>q.id));
     if(s){SQ=await s.json();LS.set('sh2-sorular',SQ)}
     if(p){try{const r=JSON.parse(b64d(p.content));PR=mergeP(r,PR);LS.set('sh2-ilerleme',PR)}catch(e){}}
@@ -678,6 +686,7 @@ function home(){
     <div class="lvl"><div class="ln"><span>Seviye ${L.l}</span><span>${L.cur} / ${L.need} XP</span></div><div class="xpbar"><i id="xb"></i></div><small style="color:var(--on-bg-mute);font-weight:700">${Q.length} soru · ${due} tekrar bekliyor · ${r+w?Math.round(r/(r+w)*100)+'% doğruluk':'henüz çözülmedi'}</small></div>
     <div class="flame${st?'':' off'}">${FLAME}<b>${st}</b><small>GÜN SERİ</small></div>
   </div>
+  ${kotaSatir()}
   ${busy?`<div class="proc${DUR.kota?' kota':''}" id="canli"><span class="beam"></span><b>${DUR.kota?'Zeka mola verdi':'🧠 Zeka çalışıyor'}</b><ul class="zlog">${(DUR.log&&DUR.log.length?DUR.log.slice(-5):[{m:'Yüklediğin dosya sırada, birkaç saniye içinde başlar.'}]).map((l,i,a)=>`<li class="${i===a.length-1?'son':''}"><span>${esc(l.m)}</span>${l.t?`<time>${zaman(l.t)}</time>`:''}</li>`).join('')}</ul></div>`:DUR.kota&&pend?`<div class="proc kota"><b>Günlük ücretsiz sınır doldu</b><small>${pend} sorunun çözümü birkaç saat içinde kendiliğinden hazırlanacak.</small></div>`:''}
   <div class="row"><label class="btn" style="position:relative;overflow:hidden">＋ Soru ekle<input type="file" id="up" multiple accept="application/pdf,image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label><button class="btn pink" id="go">Test başlat ▸</button></div>
   <div class="navrow"><button class="btn ghost" id="nDen">${ni('clock')}Deneme</button><button class="btn ghost" id="nMap">${ni('map')}Konu haritası</button><button class="btn ghost" id="nBdg">${ni('bdg')}Rozetler ${PR.rozet.length}/${BADGES.length}</button></div>
@@ -687,6 +696,7 @@ function home(){
   </section>`;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{$('#hr').style.strokeDashoffset=C*(1-pc);$('#xb').style.width=(L.cur/L.need*100)+'%'}));
   $('#up').onchange=async e=>{const fs=[...(e.target.files||[])];e.target.value='';for(let i=0;i<fs.length;i++){if(fs.length>1)toast(`Yükleniyor ${i+1}/${fs.length}…`);await upload(fs[i],i<fs.length-1)}};
+  if($('#kotaB'))$('#kotaB').onclick=kotaDetay;
   $('#go').onclick=()=>setup();$('#nDen').onclick=()=>setup(null,'deneme');$('#nMap').onclick=konuMap;$('#nBdg').onclick=rozetler;$('#set').onclick=settings;$('#mng').onclick=()=>manage();
   if($('#flg'))$('#flg').onclick=reviewFlags;
   app.querySelectorAll('.dcard').forEach(b=>b.onclick=()=>setup(b.dataset.d));
@@ -963,6 +973,7 @@ async function gemini(parts,json){
   const list=GM.model?[GM.model,...GMODELS.filter(m=>m!==GM.model)]:GMODELS;
   for(const m of list){
     let r;try{r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(GM.key)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts}],generationConfig:{temperature:.5,...(json?{responseMimeType:'application/json'}:{})}})})}catch(e){throw{code:'net'}}
+    gSay();
     if(r.status===404)continue;
     if(r.status===429)throw{code:'rate'};
     if(r.status===400||r.status===403){const t=await r.text();throw{code:/api key|API_KEY/i.test(t)?'badkey':'err'}}
@@ -974,6 +985,7 @@ async function gemini(parts,json){
   }
   throw{code:'nomodel'}
 }
+function gSay(){const g=ptGun(),c=LS.get('sh2-gk',{});if(c.gun!==g){c.gun=g;c.n=0}c.n++;LS.set('sh2-gk',c)}
 const gErr=e=>!navigator.onLine?'İnternet bağlantısı yok.':e&&e.code==='nokey'?'Önce Ayarlar\'dan Gemini anahtarını gir.':e&&e.code==='rate'?'Gemini sınırına takıldın, bir dakika sonra tekrar dene.':e&&e.code==='badkey'?'Gemini anahtarı geçersiz. Ayarlardan kontrol et.':'Gemini cevap vermedi, tekrar dene.';
 async function qParts(q){
   if(q.tip==='img'){const u=await imgURL(q.img),b=await (await fetch(u)).blob();const d=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]);fr.readAsDataURL(b)});return[{inline_data:{mime_type:'image/jpeg',data:d}}]}
@@ -1114,6 +1126,25 @@ async function videoAc(q){
   try{const L=await videoListe();if(iptal)return;if(L[q.id]&&L[q.id].durum==='hazir')await oynat();else{$('#vbox').querySelector('b').textContent='Video hazırlanıyor';iste()}}
   catch(e){msg(ghMsg(e))}
 }
+
+/* ================= kota göstergesi ================= */
+const ptGun=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+function ptKalan(){const p=new Intl.DateTimeFormat('en-GB',{timeZone:'America/Los_Angeles',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date()).split(':').map(Number);return (86400-(p[0]*3600+p[1]*60+p[2]))*1000}
+function yenilenme(){const ms=ptKalan(),t=new Date(Date.now()+ms),sa=ms/36e5;return{saat:t.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}),kalan:sa>=1?Math.floor(sa)+' sa '+Math.round((sa%1)*60)+' dk':Math.round(sa*60)+' dk'}}
+function ayYenilenme(){const d=new Date(),n=new Date(d.getFullYear(),d.getMonth()+1,1);return n.toLocaleDateString('tr-TR',{day:'numeric',month:'long'})}
+function kotaVeri(){const g=ptGun(),z=KOTA.gun===g?(KOTA.istek||0):0,zl=KOTA.limit||500,ay=new Date().toISOString().slice(0,7),dk=KOTA.ay===ay?(KOTA.dakika||0):0,vid=KOTA.ay===ay?(KOTA.video||0):0,c=LS.get('sh2-gk',{}),u=c.gun===g?c.n:0;return{z,zl,dk,dl:KOTA.dk_limit||2000,vid,u,ul:500,doldu:KOTA.doldu===g}}
+const kRenk=p=>p>=1?'var(--pink)':p>=.8?'#FF8A00':'var(--mint)';
+function kotaSatir(){const k=kotaVeri(),y=yenilenme(),pz=k.doldu?1:k.z/k.zl,pd=k.dk/k.dl;
+  return `<button class="kota" id="kotaB" aria-label="Kota ayrıntıları"><span><i style="background:${kRenk(pz)}"></i>Zeka ${k.doldu?'doldu':k.z+'/'+k.zl}</span>${GM.key?`<span><i style="background:${kRenk(k.u/k.ul)}"></i>Soru-cevap ${k.u}/${k.ul}</span>`:''}<span><i style="background:${kRenk(pd)}"></i>Video ${Math.round(k.dk)}/${k.dl} dk</span><span class="yn">↻ ${y.saat}</span></button>`}
+function bar(p,renk){return `<div class="track" style="height:12px"><i style="width:${Math.min(100,p*100)}%;background:${renk};transition:none"></i></div>`}
+function kotaDetay(){const k=kotaVeri(),y=yenilenme(),pz=k.doldu?1:k.z/k.zl;
+  const kalanSoru=Math.max(0,Math.floor((k.zl-k.z)/1.15));
+  sheet(`<h3>Kotalar</h3>
+  <div class="fld"><div class="ln2"><b>🧠 Zeka (soru işleme)</b><span>${k.doldu?'doldu':k.z+' / '+k.zl+' istek'}</span></div>${bar(pz,kRenk(pz))}<small class="kn">${k.doldu?'Bugünkü ücretsiz sınır doldu. Kalan dosyalar yenilenmeden sonra kendiliğinden işlenir.':`Bugün yaklaşık <b>${kalanSoru} soru</b> daha işlenebilir (soru başına ~1 istek, sayfa başına 1 okuma).`} Yenilenme: <b>${y.saat}</b> (${y.kalan} sonra).</small></div>
+  ${GM.key?`<div class="fld"><div class="ln2"><b>💬 Soru sor · Anlamadım · Benzer soru</b><span>${k.u} / ${k.ul}</span></div>${bar(k.u/k.ul,kRenk(k.u/k.ul))}<small class="kn">Uygulamadaki Gemini anahtarın. Bu cihazda bugün ${k.u} istek. Aynı saatte (${y.saat}) yenilenir.</small></div>`:''}
+  <div class="fld"><div class="ln2"><b>🎬 Video ve zeka çalışma süresi</b><span>${Math.round(k.dk)} / ${k.dl} dk</span></div>${bar(k.dk/k.dl,kRenk(k.dk/k.dl))}<small class="kn">GitHub'ın ayda ücretsiz verdiği süre. Bu ay ${k.vid} video üretildi; bir video ~1–2 dk harcar. Yenilenme: <b>${ayYenilenme()}</b>.</small></div>
+  <div class="fld"><div class="ln2"><b>🔊 Ses, anlatım, kalemler</b><span>sınırsız</span></div><small class="kn">Cihazda çalışır, kota harcamaz.</small></div>
+  <p class="kn" style="margin:0">Dakikada en fazla 15 istek yapılabildiği için zeka hızını buna göre ayarlıyor. Sınırlar Google'ın ücretsiz katmanına göre tahminidir; senin hesabındaki gerçek sınırı aistudio.google.com'da görebilirsin.</p>`,()=>{})}
 
 /* ================= başlat ================= */
 window.addEventListener('error',e=>console.warn(e.message));
