@@ -738,7 +738,7 @@ function loadScript(src){return new Promise((res,rej)=>{const s=document.createE
 async function pdfLib(){if(window.pdfjsLib)return;await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}
 const canvasB64=(c,q)=>c.toDataURL('image/jpeg',q||.86).split(',')[1];
 async function putTekrar(path,b64,msg){let son;for(let i=0;i<3;i++){try{return await GH.put(path,b64,null,msg)}catch(e){son=e;if(e.status===401||e.status===403||e.status===404)break;await new Promise(r=>setTimeout(r,2000*(i+1)))}}throw son}
-async function upload(f,sessiz){
+async function upload(f,sessiz,sadece,grupAd){
   const isPdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name),isImg=/^image\//.test(f.type)||/\.(jpe?g|png|webp|heic)$/i.test(f.name);
   if(!isPdf&&!isImg){toast('Sadece PDF ya da fotoğraf yükleyebilirsin.');return}
   const card=document.createElement('div');card.className='proc';card.innerHTML='<span class="beam"></span><b>Yükleniyor…</b><small></small>';card.querySelector('small').textContent=f.name;
@@ -757,14 +757,21 @@ async function upload(f,sessiz){
     }else{ // büyük PDF: sayfa sayfa görsele çevirip yükle
       durumYaz('PDF açılıyor…');await pdfLib();
       const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer(),isEvalSupported:false}).promise;
-      for(let n=1;n<=pdf.numPages;n++){
+      let kilit=null;try{kilit=await navigator.wakeLock.request('screen')}catch(e){}
+      const sayfalar=sadece||[...Array(pdf.numPages)].map((_,i)=>i+1),eksik=[];
+      card.insertAdjacentHTML('beforeend','<small>Yükleme bitene kadar uygulamadan çıkma.</small>');
+      for(const n of sayfalar){
         durumYaz(`Sayfa ${n}/${pdf.numPages} yükleniyor…`);
-        const pg=await pdf.getPage(n),v1=pg.getViewport({scale:1}),v=pg.getViewport({scale:1600/v1.width});
-        const c=document.createElement('canvas');c.width=v.width|0;c.height=v.height|0;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
-        await pg.render({canvasContext:x,viewport:v}).promise;
-        await putTekrar(`gelen/${st}-${ad}-s${String(n).padStart(3,'0')}.jpg`,canvasB64(c,.85),`yükleme: ${ad} sayfa ${n}`);
-        c.width=c.height=0;
+        try{
+          const pg=await pdf.getPage(n),v1=pg.getViewport({scale:1}),v=pg.getViewport({scale:1400/v1.width});
+          const c=document.createElement('canvas');c.width=v.width|0;c.height=v.height|0;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+          await pg.render({canvasContext:x,viewport:v}).promise;
+          await putTekrar(`gelen/${grupAd||st+'-'+ad}-s${String(n).padStart(3,'0')}.jpg`,canvasB64(c,.82),`yükleme: ${ad} sayfa ${n}`);
+          c.width=c.height=0;pg.cleanup();
+        }catch(e){eksik.push(n);if(e&&e.status===401)throw e}
       }
+      try{kilit&&kilit.release()}catch(e){}
+      if(eksik.length){const err=new Error(`${sayfalar.length-eksik.length}/${sayfalar.length} sayfa yüklendi; ${eksik.join(', ')}. sayfa yüklenemedi`);err.eksik=eksik;err.grup=grupAd||st+'-'+ad;throw err}
     }
     PR.yukleme=(PR.yukleme||0)+1;LS.set('sh2-ilerleme',PR);syncSoon();
     LS.set('sh2-bekle',now()+20*60e3);DUR={...DUR,calisiyor:true,kota:false,mesaj:'Dosya yüklendi. Zeka birkaç saniye içinde başlayacak.'};
@@ -772,7 +779,7 @@ async function upload(f,sessiz){
   }catch(e){
     card.classList.add('kota');card.innerHTML='<b>Yükleme olmadı</b><small></small><div class="row"><button class="btn sm">Tekrar dene</button><button class="btn ghost sm">Kapat</button></div>';
     card.querySelector('small').textContent=(e&&e.status?ghMsg(e):(e&&e.message)||'Bilinmeyen hata')+' · '+f.name;
-    const[b1,b2]=card.querySelectorAll('button');b1.onclick=()=>{card.remove();upload(f)};b2.onclick=()=>card.remove();
+    const[b1,b2]=card.querySelectorAll('button');if(e&&e.eksik)b1.textContent='Eksik sayfaları yükle';b1.onclick=()=>{card.remove();e&&e.eksik?upload(f,false,e.eksik,e.grup):upload(f)};b2.onclick=()=>card.remove();
   }
 }
 
