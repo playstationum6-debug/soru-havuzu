@@ -667,14 +667,14 @@ function home(){
     <div class="flame${st?'':' off'}">${FLAME}<b>${st}</b><small>GÜN SERİ</small></div>
   </div>
   ${busy?`<div class="proc${DUR.kota?' kota':''}"><span class="beam"></span><b>${DUR.kota?'Zeka mola verdi':'Zeka soruları işliyor'}</b><small>${esc(DUR.mesaj||'Yüklediğin dosya sırada, birkaç saniye içinde başlar.')}</small></div>`:DUR.kota&&pend?`<div class="proc kota"><b>Günlük ücretsiz sınır doldu</b><small>${pend} sorunun çözümü birkaç saat içinde kendiliğinden hazırlanacak.</small></div>`:''}
-  <div class="row"><label class="btn" style="position:relative;overflow:hidden">＋ Soru ekle<input type="file" id="up" accept="application/pdf,image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label><button class="btn pink" id="go">Test başlat ▸</button></div>
+  <div class="row"><label class="btn" style="position:relative;overflow:hidden">＋ Soru ekle<input type="file" id="up" multiple accept="application/pdf,image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label><button class="btn pink" id="go">Test başlat ▸</button></div>
   <div class="navrow"><button class="btn ghost" id="nDen">${ni('clock')}Deneme</button><button class="btn ghost" id="nMap">${ni('map')}Konu haritası</button><button class="btn ghost" id="nBdg">${ni('bdg')}Rozetler ${PR.rozet.length}/${BADGES.length}</button></div>
   ${fl.length?`<div class="panel"><div class="flagq"><b>${fl.length} soruda cevap uyuşmuyor</b><small style="color:var(--mute);font-weight:600">Senin işaretin ile zekanın bulduğu cevap farklı. Doğrusunu seç.</small><button class="btn pink sm" id="flg">Kontrol et</button></div></div>`:''}
   <div class="panel"><div class="ph"><h2>Dersler</h2><button class="btn ghost sm" id="mng">Havuzu düzenle</button></div>
   ${ds.length?`<div class="dgrid">${ds.map(d=>{const a=by[d],dd=a.filter(isDue).length,rr=a.reduce((s,q)=>s+(q.right||0),0),ww=a.reduce((s,q)=>s+(q.wrong||0),0);return `<button class="dcard" data-d="${esc(d)}"><span class="dt"><span class="dot" style="background:${DC[d]||'#C9CEF0'}"></span>${esc(d)}</span><small>${a.length} soru ${dd?`<span class="due">${dd} tekrar</span>`:''}</small><div class="minibar"><i style="width:${rr+ww?rr/(rr+ww)*100:0}%"></i></div></button>`}).join('')}</div>`:`<div class="empty"><b>Havuz boş</b><span>PDF ya da fotoğraf yükle, zeka soruları ayırıp buraya koysun.</span></div>`}</div>
   </section>`;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{$('#hr').style.strokeDashoffset=C*(1-pc);$('#xb').style.width=(L.cur/L.need*100)+'%'}));
-  $('#up').onchange=e=>{const f=e.target.files&&e.target.files[0];e.target.value='';if(f)upload(f)};
+  $('#up').onchange=async e=>{const fs=[...(e.target.files||[])];e.target.value='';for(let i=0;i<fs.length;i++){if(fs.length>1)toast(`Yükleniyor ${i+1}/${fs.length}…`);await upload(fs[i],i<fs.length-1)}};
   $('#go').onclick=()=>setup();$('#nDen').onclick=()=>setup(null,'deneme');$('#nMap').onclick=konuMap;$('#nBdg').onclick=rozetler;$('#set').onclick=settings;$('#mng').onclick=()=>manage();
   if($('#flg'))$('#flg').onclick=reviewFlags;
   app.querySelectorAll('.dcard').forEach(b=>b.onclick=()=>setup(b.dataset.d));
@@ -712,7 +712,7 @@ function settings(){
 }
 
 /* ================= yükleme ================= */
-async function upload(f){
+async function upload(f,sessiz){
   const isPdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name),isImg=/^image\//.test(f.type);
   if(!isPdf&&!isImg){toast('Sadece PDF ya da fotoğraf yükleyebilirsin.');return}
   if(f.size>45e6){toast('Dosya çok büyük (45 MB üstü). PDF\'i parçalara böl.');return}
@@ -727,7 +727,7 @@ async function upload(f){
     await GH.put('gelen/'+st+'-'+ad,b64,null,'yükleme: '+ad);
     PR.yukleme=(PR.yukleme||0)+1;LS.set('sh2-ilerleme',PR);syncSoon();
     LS.set('sh2-bekle',now()+15*60e3);DUR={...DUR,calisiyor:true,kota:false,mesaj:'Dosya yüklendi. Zeka birkaç saniye içinde başlayacak.'};
-    toast('Yüklendi. Sorular hazır oldukça burada belirecek.');burst(card,40);home();poll(true);checkBadges();
+    if(!sessiz){toast('Yüklendi. Sorular hazır oldukça burada belirecek.');burst(card,40);home();poll(true);checkBadges()}else card.remove();
   }catch(e){card.remove();toast(ghMsg(e))}
 }
 
@@ -834,8 +834,8 @@ function finish(k){
   const exp=ce?`${q.tip==='img'?`<p class="lab" style="margin:0">Zekanın çözümü${cl!=null&&cl!==q.ans?` · zeka ${LET[cl]} buldu`:''}</p>`:''}<p>${esc(ce)}</p>`:q.solve==='pending'?'<p>Bu sorunun çözümü hazırlanıyor, sonraki sefer görünecek.</p>':'';
   const aiNote=q.src==='ai'&&(PR.q[q.id]||{}).ans===undefined?`<p style="font-size:13px;font-weight:700;margin:0">Bu sorunun cevabını zeka buldu, yanlış olabilir. <button class="btn ghost sm" id="fixA">Cevabı düzelt</button></p>`:'';
   const nt=q.not||q.note?`<div class="stick"><small>Notun</small>${esc(q.not||q.note)}</div>`:'';
-  $('#abar').insertAdjacentHTML('afterbegin',`<div class="fb ${R.blank?'blank':R.ok?'ok':'bad'}"><h3>${R.blank?'Boş bıraktın · cevap '+LET[q.ans]:R.ok?(T.streak>=3?`Doğru! ${T.streak} seri`:'Doğru!'):'Yanlış · cevap '+LET[q.ans]}</h3>${exp}${nt}${aiNote}<div class="watch"><button class="btn sm" id="wA">▶ Anlatımı izle</button><button class="btn ghost sm" id="wB">Benzer soru üret</button></div><p style="font-size:13px;color:var(--mute)">Bu soru ${days} gün sonra tekrar gelecek.</p></div>`);
-  $('#wA').onclick=()=>anlat(allQ().find(x=>x.id===q.id)||q);$('#wB').onclick=()=>benzer(q);
+  $('#abar').insertAdjacentHTML('afterbegin',`<div class="fb ${R.blank?'blank':R.ok?'ok':'bad'}"><h3>${R.blank?'Boş bıraktın · cevap '+LET[q.ans]:R.ok?(T.streak>=3?`Doğru! ${T.streak} seri`:'Doğru!'):'Yanlış · cevap '+LET[q.ans]}</h3>${exp}${nt}${aiNote}<div class="watch"><button class="btn sm" id="wA">▶ Anlatımı izle</button><button class="btn pink sm" id="wV">🎬 Video</button><button class="btn ghost sm" id="wB">Benzer soru üret</button></div><p style="font-size:13px;color:var(--mute)">Bu soru ${days} gün sonra tekrar gelecek.</p></div>`);
+  $('#wA').onclick=()=>anlat(allQ().find(x=>x.id===q.id)||q);$('#wV').onclick=()=>videoAc(q);$('#wB').onclick=()=>benzer(q);
   if($('#fixA'))$('#fixA').onclick=()=>sheet(`<h3>Doğru cevap hangisi?</h3><div class="ansrow">${[...LET].map((l,i)=>`<button class="chip" data-a="${i}" aria-pressed="${q.ans===i}">${l}</button>`).join('')}<span></span></div>`,(el,close)=>el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{setP(q.id,{ans:+b.dataset.a});close();toast('Cevap kaydedildi.')}));
   const ab=$('.abtns');ab.innerHTML=`<button class="btn" id="nx" style="grid-column:1/-1">${last?'Sonucu gör':'Sonraki soru'} ▸</button>`;ab.style.gridTemplateColumns='1fr';
   $('#nx').onclick=()=>{if(last)result();else{T.i++;T.usedHint=false;openQ()}};
@@ -866,7 +866,7 @@ function result(den){
   if($('#rw'))$('#rw').onclick=()=>startTest(wr);$('#hm').onclick=()=>{T=null;home()};scrollTo(0,0);
   checkBadges({cozdu:n>0,kusursuz:n>=10&&d===n,deneme:!!den,maxSeri:T.maxSeri||0});pushP();
 }
-function reviewOne(id){const q=allQ().find(x=>x.id===id);if(!q)return;sheet(`<h3>${esc(q.konu||q.ders)}</h3><div class="prev" style="background:#fff">${qHTML(q)}</div><p style="margin:0;font-weight:800">Doğru cevap: ${q.ans!=null?LET[q.ans]:'?'}</p>${q.cozum?`<p style="margin:0;font-weight:600">${esc(q.cozum)}</p>`:''}<div class="watch"><button class="btn sm" id="rA">▶ Anlatımı izle</button><button class="btn ghost sm" id="rB">Benzer soru üret</button></div>`,(el,close)=>{fillImgs(el);$('#rA',el).onclick=()=>{close();anlat(q)};$('#rB',el).onclick=()=>{close();benzer(q)}})}
+function reviewOne(id){const q=allQ().find(x=>x.id===id);if(!q)return;sheet(`<h3>${esc(q.konu||q.ders)}</h3><div class="prev" style="background:#fff">${qHTML(q)}</div><p style="margin:0;font-weight:800">Doğru cevap: ${q.ans!=null?LET[q.ans]:'?'}</p>${q.cozum?`<p style="margin:0;font-weight:600">${esc(q.cozum)}</p>`:''}<div class="watch"><button class="btn sm" id="rA">▶ Anlatımı izle</button><button class="btn pink sm" id="rV">🎬 Video</button><button class="btn ghost sm" id="rB">Benzer soru üret</button></div>`,(el,close)=>{fillImgs(el);$('#rA',el).onclick=()=>{close();anlat(q)};$('#rV',el).onclick=()=>{close();videoAc(q)};$('#rB',el).onclick=()=>{close();benzer(q)}})}
 
 /* ================= konu haritası ================= */
 function konuMap(){
@@ -973,7 +973,7 @@ async function anlat(q){
   closePl();const el=document.createElement('div');el.className='pl';document.body.appendChild(el);
   PL={q,A,i:0,playing:false,rate:1,token:0,timer:0,el,svg:null};
   const ar=(q.h||400)/(q.w||600);
-  el.innerHTML=`<div class="fbar"><button class="x" id="plx" aria-label="Kapat">✕</button><b>${esc(q.konu||q.ders||'Anlatım')}</b></div>
+  el.innerHTML=`<div class="fbar"><button class="x" id="plx" aria-label="Kapat">✕</button><b>${esc(q.konu||q.ders||'Anlatım')}</b><button class="btn pink sm" id="plV">🎬 Video</button></div>
   <div class="plc"><div class="plst"><div class="plfig"><div class="plh" id="plh">${q.tip==='html'?q.html:`<img alt="Soru" id="plimg"><svg class="ov" viewBox="0 0 1000 ${Math.round(1000*ar)}" preserveAspectRatio="none"></svg>`}</div></div><div class="plb" id="plb" aria-live="polite"></div></div>
   <div class="plcap"><span class="st" id="plst">1/${A.length}</span><span id="plcap">Oynat'a bas, anlatım başlasın.</span></div>
   <div class="plctl"><button class="x" id="plp" aria-label="Önceki adım"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button><button class="x big" id="plplay" aria-label="Oynat"><svg viewBox="0 0 24 24" id="plpi"><path d="M8 5l11 7-11 7z" fill="#0A0F3C"/></svg></button><button class="x" id="pln" aria-label="Sonraki adım"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button><div class="plpg" id="plpg">${A.map((_,n)=>`<i data-n="${n}"><b></b></i>`).join('')}</div><button class="plsp" id="plspd">1x</button><button class="x" id="plsnd" aria-label="Ses"><svg viewBox="0 0 24 24" id="plsi"></svg></button></div></div>
@@ -983,7 +983,7 @@ async function anlat(q){
   if(q.tip==='img'){PL.svg=el.querySelector('svg.ov');try{$('#plimg',el).src=await imgURL(q.img)}catch(e){}}
   else{const h=$('#plh',el);h.querySelectorAll('p').forEach((p,n)=>p.dataset.id='p'+n);h.querySelectorAll('li').forEach((l,n)=>l.dataset.id='li'+n)}
   sndIcon();
-  $('#plx',el).onclick=closePl;
+  $('#plx',el).onclick=closePl;$('#plV',el).onclick=()=>{pausePl();videoAc(q)};
   $('#plplay',el).onclick=()=>{if(PL.playing){pausePl();return}if(PL.i>=A.length)PL.i=0;jumpPl(PL.i);PL.playing=true;plIcon();runPl()};
   $('#pln',el).onclick=()=>{if(PL.i<A.length-1)jumpPl(PL.i+1)};$('#plp',el).onclick=()=>jumpPl(Math.max(0,PL.i-1));
   el.querySelectorAll('#plpg i').forEach(b=>b.onclick=()=>jumpPl(+b.dataset.n));
@@ -1056,6 +1056,28 @@ Sadece JSON döndür: {"soru":"Türkçe soru metni","sekil":"şekil tarifi ya da
       $('#bqAdd').onclick=e=>{const id='ek'+Date.now().toString(36);PR.ek=PR.ek||{};PR.ek[id]={id,tip:'html',html:`<div class="qhtml"><p>${esc(y.soru)}</p>${y.sekil?`<p><i>Şekil: ${esc(y.sekil)}</i></p>`:''}</div>`,o,ans:ci,mark:ci,ders:q.ders,konu:q.konu,cozum:String(y.cozum||'').slice(0,1500),solve:'done',kaynak:'Benzer soru',eklendi:new Date().toISOString(),t:now()};LS.set('sh2-ilerleme',PR);syncSoon();e.currentTarget.textContent='Eklendi ✓';e.currentTarget.disabled=true;toast('Benzer soru havuza eklendi.')};
       $('#bqNew').onclick=()=>{close();benzer(q)}}});
   }catch(e){if(box.isConnected)box.innerHTML=`<p class="diag"></p>`,box.firstChild.textContent=gErr(e)}
+}
+
+/* ================= gerçek video (GitHub'da üretilir) ================= */
+async function videoListe(){try{const r=await GH.raw('video/liste.json');return r?await r.json():{}}catch(e){return{}}}
+async function videoAc(q){
+  if(!q.anlatim&&q.solve==='pending'){toast('Bu sorunun anlatımı henüz hazırlanıyor, biraz sonra dene.');return}
+  let iptal=false,vurl=null;
+  const close=sheet(`<h3>🎬 ${esc(q.konu||q.ders||'Video')}</h3><div id="vbox"><div class="proc"><span class="beam"></span><b>Video kontrol ediliyor…</b><small id="vmsg"></small></div></div>`,()=>{});
+  const scs=document.querySelectorAll('.scrim'),scrim=scs[scs.length-1];const obs=new MutationObserver(()=>{if(!scrim.isConnected){iptal=true;obs.disconnect();if(vurl)URL.revokeObjectURL(vurl)}});obs.observe(document.body,{childList:true});
+  const box=$('#vbox'),msg=t=>{const m=$('#vmsg');if(m)m.textContent=t};
+  const oynat=async()=>{msg('Video indiriliyor…');const r=await GH.raw('video/'+q.id+'.mp4');if(!r)throw new Error('yok');vurl=URL.createObjectURL(await r.blob());if(iptal)return;
+    box.innerHTML=`<video controls autoplay playsinline style="width:100%;border-radius:14px;border:2px solid var(--ink);background:#000" src="${vurl}"></video><div class="row" style="margin-top:10px"><a class="btn sm" href="${vurl}" download="${esc((q.konu||'soru').replace(/[^\wçğıöşüÇĞİÖŞÜ-]+/g,'-'))}.mp4">⬇ Tablete kaydet</a><button class="btn ghost sm" id="vYeni">Yeniden üret</button></div>`;
+    $('#vYeni').onclick=()=>{box.innerHTML='<div class="proc"><span class="beam"></span><b>Yeniden üretiliyor…</b><small id="vmsg"></small></div>';iste(true)}};
+  const iste=async(zorla)=>{
+    try{const m=await GH.meta('video_iste/'+q.id);await GH.put('video_iste/'+q.id,b64e(String(now())),m&&m.sha,'video isteği '+q.id)}catch(e){msg(ghMsg(e));return}
+    const t0=Date.now()/1000-5;msg('Zeka videoyu hazırlıyor. Genelde 1–3 dakika sürer, bu pencereyi kapatabilirsin; video hazır olunca burada açılır.');
+    for(let i=0;i<40&&!iptal;i++){await new Promise(r=>setTimeout(r,15000));if(iptal)return;const L=await videoListe(),v=L[q.id];
+      if(v&&v.zaman>=t0){if(v.durum==='hazir'){burst(box,50);return oynat()}msg('Video üretilemedi: '+(v.mesaj||'bilinmeyen hata'));return}
+      msg(`Zeka videoyu hazırlıyor… (${(i+1)*15} sn)`)}
+  };
+  try{const L=await videoListe();if(iptal)return;if(L[q.id]&&L[q.id].durum==='hazir')await oynat();else{$('#vbox').querySelector('b').textContent='Video hazırlanıyor';iste()}}
+  catch(e){msg(ghMsg(e))}
 }
 
 /* ================= başlat ================= */
