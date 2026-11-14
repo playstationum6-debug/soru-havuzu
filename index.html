@@ -295,6 +295,10 @@ table.ft{width:100%;border-collapse:collapse;font-size:13px}
 @keyframes inl{from{opacity:0;transform:translateX(-24px)}}
 
 
+.zlog{list-style:none;margin:0;padding:0;display:grid;gap:4px;position:relative}
+.zlog li{display:flex;gap:8px;justify-content:space-between;font:700 13px var(--body);color:var(--on-bg-mute);animation:sup2 .4s both}
+.zlog li.son{color:var(--on-bg)}.zlog li.son span::after{content:'';display:inline-block;width:6px;height:6px;margin-left:6px;border-radius:50%;background:var(--sun);animation:pulse 1s infinite;vertical-align:middle}
+.zlog time{flex:none;opacity:.7;font-variant-numeric:tabular-nums}
 /* ---------- anlatım oynatıcısı ---------- */
 .pl{position:fixed;inset:0;z-index:25;background:var(--bg);display:flex;flex-direction:column;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);animation:fade .25s both;overflow:auto}
 .pl .fbar b{flex:1;font:800 18px var(--display);color:var(--on-bg);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -599,7 +603,15 @@ function newArrived(n){document.querySelectorAll('.newq').forEach(x=>x.remove())
 
 /* durum takibi: zeka çalışırken 20 sn'de bir bak */
 let pollT=0;
-function poll(fast){clearTimeout(pollT);pollT=setTimeout(async()=>{if(document.hidden){poll();return}await pull(true);if(view==='home')home();if(DUR.calisiyor||LS.get('sh2-bekle',0)>now())poll(true)},fast?20000:60000)}
+const zaman=t=>{const s=Math.max(0,(Date.now()-Date.parse(t))/1000|0);return s<60?s+' sn':(s/60|0)+' dk'};
+async function durumCek(){try{const r=await GH.raw('durum.json');if(r){const d=await r.json();const degisti=JSON.stringify(d.log)!==JSON.stringify(DUR.log);DUR=d;LS.set('sh2-durum',DUR);return degisti}}catch(e){}return false}
+let pollN=0;
+function poll(fast){clearTimeout(pollT);pollT=setTimeout(async()=>{if(document.hidden){poll(fast);return}
+  pollN++;const busy=DUR.calisiyor||LS.get('sh2-bekle',0)>now();
+  if(busy&&pollN%3){if(await durumCek()&&view==='home')home();const lg=DUR.log||[];if(/kesildi|hazır|Hepsi/.test((lg[lg.length-1]||{}).m||''))await pull(true);if(view==='home')home()}
+  else{await pull(true);if(view==='home')home()}
+  if(!DUR.calisiyor&&LS.get('sh2-bekle',0)>now()&&(DUR.log||[]).some(l=>/Hepsi hazır/.test(l.m)&&Date.parse(l.t)>now()-60e3))LS.set('sh2-bekle',0);
+  if(DUR.calisiyor||LS.get('sh2-bekle',0)>now())poll(true);else poll()},fast?7000:60000)}
 
 /* görseller: önbellekli */
 const IMGC=new Map();
@@ -666,7 +678,7 @@ function home(){
     <div class="lvl"><div class="ln"><span>Seviye ${L.l}</span><span>${L.cur} / ${L.need} XP</span></div><div class="xpbar"><i id="xb"></i></div><small style="color:var(--on-bg-mute);font-weight:700">${Q.length} soru · ${due} tekrar bekliyor · ${r+w?Math.round(r/(r+w)*100)+'% doğruluk':'henüz çözülmedi'}</small></div>
     <div class="flame${st?'':' off'}">${FLAME}<b>${st}</b><small>GÜN SERİ</small></div>
   </div>
-  ${busy?`<div class="proc${DUR.kota?' kota':''}"><span class="beam"></span><b>${DUR.kota?'Zeka mola verdi':'Zeka soruları işliyor'}</b><small>${esc(DUR.mesaj||'Yüklediğin dosya sırada, birkaç saniye içinde başlar.')}</small></div>`:DUR.kota&&pend?`<div class="proc kota"><b>Günlük ücretsiz sınır doldu</b><small>${pend} sorunun çözümü birkaç saat içinde kendiliğinden hazırlanacak.</small></div>`:''}
+  ${busy?`<div class="proc${DUR.kota?' kota':''}" id="canli"><span class="beam"></span><b>${DUR.kota?'Zeka mola verdi':'🧠 Zeka çalışıyor'}</b><ul class="zlog">${(DUR.log&&DUR.log.length?DUR.log.slice(-5):[{m:'Yüklediğin dosya sırada, birkaç saniye içinde başlar.'}]).map((l,i,a)=>`<li class="${i===a.length-1?'son':''}"><span>${esc(l.m)}</span>${l.t?`<time>${zaman(l.t)}</time>`:''}</li>`).join('')}</ul></div>`:DUR.kota&&pend?`<div class="proc kota"><b>Günlük ücretsiz sınır doldu</b><small>${pend} sorunun çözümü birkaç saat içinde kendiliğinden hazırlanacak.</small></div>`:''}
   <div class="row"><label class="btn" style="position:relative;overflow:hidden">＋ Soru ekle<input type="file" id="up" multiple accept="application/pdf,image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label><button class="btn pink" id="go">Test başlat ▸</button></div>
   <div class="navrow"><button class="btn ghost" id="nDen">${ni('clock')}Deneme</button><button class="btn ghost" id="nMap">${ni('map')}Konu haritası</button><button class="btn ghost" id="nBdg">${ni('bdg')}Rozetler ${PR.rozet.length}/${BADGES.length}</button></div>
   ${fl.length?`<div class="panel"><div class="flagq"><b>${fl.length} soruda cevap uyuşmuyor</b><small style="color:var(--mute);font-weight:600">Senin işaretin ile zekanın bulduğu cevap farklı. Doğrusunu seç.</small><button class="btn pink sm" id="flg">Kontrol et</button></div></div>`:''}
