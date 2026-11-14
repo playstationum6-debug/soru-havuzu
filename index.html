@@ -350,6 +350,10 @@ const RM=matchMedia('(prefers-reduced-motion:reduce)').matches;
 function toast(m){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
 const LS={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 function sheet(html,mount){const s=document.createElement('div');s.className='scrim';s.innerHTML=`<div class="sheet" role="dialog">${html}</div>`;document.body.appendChild(s);const close=()=>s.remove();s.addEventListener('click',e=>{if(e.target===s)close()});mount&&mount(s.firstChild,close);return close}
+/* kalemin yan tuşu (S Pen vb.) basılıyken silgi; kalemin silgi ucu da silgi */
+function penEr(e){return e.pointerType==='pen'&&(((e.buttons||0)&(2|32))!==0||e.button===2||e.button===5)}
+window.tool_=()=>tool;
+document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.vp'))e.preventDefault()});
 function segDist(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy;let t=l?((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l:0;t=Math.max(0,Math.min(1,t));return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy)}
 function rdp(P,e){if(P.length<3)return P.slice();let m=0,ix=0;const a=P[0],b=P[P.length-1];for(let i=1;i<P.length-1;i++){const d=segDist(P[i],a,b);if(d>m){m=d;ix=i}}if(m>e){const l=rdp(P.slice(0,ix+1),e),r=rdp(P.slice(ix),e);return l.slice(0,-1).concat(r)}return[a,b]}
 function angSnap(a,b){const dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy),an=Math.atan2(dy,dx),st=Math.PI/4,sn=Math.round(an/st)*st;return Math.abs(an-sn)<0.09?[a[0]+Math.cos(sn)*L,a[1]+Math.sin(sn)*L]:b}
@@ -402,6 +406,7 @@ class Ink{
   redraw(){const g=this.cx(this.gc);g.clearRect(0,0,1000,this.hu);this.ghost.forEach(s=>drawStroke(g,s));const m=this.cx(this.mc);m.clearRect(0,0,1000,this.hu);this.strokes.forEach(s=>drawStroke(m,s))}
   pt(e){const r=this.mc.getBoundingClientRect();return[(e.clientX-r.left)/r.width*1000,(e.clientY-r.top)/r.width*1000]}
   down(e){
+    const tool=penEr(e)?'er':window.tool_();
     const [x,y]=this.pt(e);this.lastT=e.timeStamp;this.vf=1;this.anchor=[e.clientX,e.clientY];this.isPen=e.pointerType==='pen';
     if(tool==='er'&&TS.er.m==='stroke'){this.cur={t:'se'};this.eraseAt(x,y);return}
     const t=TS[tool];this.cur={t:tool,c:t.c,w:t.w,p:[x,y,this.f(e,0)]};
@@ -450,7 +455,7 @@ class Gest{
     if(this.mode==='draw'&&this.dType==='pen')return;
     if(e.pointerType==='touch'&&T.length>=2){if(this.mode==='draw')this.h.cancel();this.mode='pinch';this.ids=T.slice(0,2).map(t=>t[0]);const[a,b]=this.ids.map(i=>this.P.get(i));this.z={d:Math.hypot(a.x-b.x,a.y-b.y)||1,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,s:this.s,tx:this.tx,ty:this.ty};return}
     if(this.mode)return;
-    if(e.button>0)return;
+    if(e.button>0&&!(e.pointerType==='pen'&&penEr(e)))return;
     if(this.h.canDraw(e)){this.mode='draw';this.dId=e.pointerId;this.dType=e.pointerType;this.h.down(e)}else{this.mode='pan';this.pId=e.pointerId;this.p0={x:e.clientX,y:e.clientY,tx:this.tx,ty:this.ty}}}
   move(e){const p=this.P.get(e.pointerId);if(!p)return;p.x=e.clientX;p.y=e.clientY;
     if(this.mode==='draw'&&e.pointerId===this.dId)this.h.move(e);
@@ -539,7 +544,18 @@ let PR=LS.get('sh2-ilerleme',null)||{v:1,q:{},gun:{},xp:0,rozet:[],hedef:30,yukl
 let DUR=LS.get('sh2-durum',{});
 const now=()=>Date.now();
 const gunK=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-function allQ(){return [...SQ,...Object.values(PR.ek||{})].map(q=>{const p=PR.q[q.id]||{};return{...q,...p,id:q.id,ans:p.ans!==undefined?p.ans:q.ans,flag:p.flag!==undefined?p.flag:q.flag}}).filter(q=>!q.sil)}
+/* matematik yazımı: \sqrt{3} -> √3, x^2 -> x² */
+const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','n':'ⁿ','-':'⁻','+':'⁺'};
+function mt(t){if(t==null)return t;let s=String(t);if(!/[\\^$]|sqrt/.test(s))return s;
+  s=s.replace(/\$+/g,'').replace(/\\left|\\right/g,'').replace(/\\(?:d|t)?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g,(m,a,b)=>(a.length>1?'('+a+')':a)+'/'+(b.length>1?'('+b+')':b));
+  for(let k=0;k<3;k++)s=s.replace(/\\sqrt\s*\[([^\]]*)\]\s*\{([^{}]*)\}/g,(m,n,a)=>(SUP[n]||n)+'√'+(a.length>1&&/[^0-9a-zA-Z]/.test(a)?'('+a+')':a)).replace(/\\sqrt\s*\{([^{}]*)\}/g,(m,a)=>'√'+(a.length>1&&/[^0-9a-zA-Z]/.test(a)?'('+a+')':a));
+  s=s.replace(/\\sqrt\s*(\w)/g,'√$1').replace(/\bsqrt\s*\(([^()]*)\)/g,(m,a)=>'√'+(/^\w+$/.test(a)?a:'('+a+')'));
+  s=s.replace(/\^\s*\{?\\circ\}?/g,'°').replace(/\\(?:degree|circ)/g,'°').replace(/\^\{([0-9n+-]+)\}|\^([0-9n])/g,(m,a,b)=>[...(a||b)].map(c=>SUP[c]||c).join(''));
+  s=s.replace(/\\cdot/g,'·').replace(/\\times/g,'×').replace(/\\div/g,'÷').replace(/\\pi/g,'π').replace(/\\alpha/g,'α').replace(/\\beta/g,'β').replace(/\\theta/g,'θ').replace(/\\Delta/g,'Δ').replace(/\\(?:le|leq)\b/g,'≤').replace(/\\(?:ge|geq)\b/g,'≥').replace(/\\neq\b/g,'≠').replace(/\\angle/g,'∠').replace(/\\triangle/g,'△').replace(/\\text\s*\{([^{}]*)\}/g,'$1').replace(/\\,|\\ /g,' ').replace(/[{}]/g,'');
+  return s}
+const mtA=a=>Array.isArray(a)?a.map(mt):a;
+function fixQ(q){if(q._mt)return q;q._mt=1;q.o=mtA(q.o);q.cozum=mt(q.cozum);q.ipucu=mtA(q.ipucu);if(Array.isArray(q.anlatim))q.anlatim.forEach(a=>{a.soz=mt(a.soz);a.yaz=mtA(a.yaz)});return q}
+function allQ(){return [...SQ,...Object.values(PR.ek||{})].map(fixQ).map(q=>{const p=PR.q[q.id]||{};return{...q,...p,id:q.id,ans:p.ans!==undefined?p.ans:q.ans,flag:p.flag!==undefined?p.flag:q.flag}}).filter(q=>!q.sil)}
 const isDue=q=>q.seen&&(q.due||0)<=now();
 function setP(id,patch){PR.q[id]={...(PR.q[id]||{}),...patch,t:now()};LS.set('sh2-ilerleme',PR);syncSoon()}
 
@@ -771,7 +787,7 @@ async function openQ(){
   page.innerHTML=qHTML(q)+`<div class="scratch" id="scr"><span>Karalama alanı</span></div>`;
   fillImgs(page);
   T.ink=new Ink(page);
-  T.g=new Gest(vp,page,{canDraw:e=>{if(e.pointerType==='pen'&&!penSeen){penSeen=true;LS.set('sh-pen',true);toast('Kalem algılandı: kalemle yaz, parmakla kaydır.')}if(tool==='hand')return false;if(e.pointerType==='touch'&&penSeen&&!OPT.fingerDraw)return false;return true},down:e=>T.ink.down(e),move:e=>T.ink.move(e),up:e=>T.ink.up(e),cancel:()=>T.ink.cancel()});
+  T.g=new Gest(vp,page,{canDraw:e=>{if(e.pointerType==='pen'&&!penSeen){penSeen=true;LS.set('sh-pen',true);toast('Kalem algılandı: kalemle yaz, parmakla kaydır.')}if(penEr(e))return true;if(tool==='hand')return false;if(e.pointerType==='touch'&&penSeen&&!OPT.fingerDraw)return false;return true},down:e=>T.ink.down(e),move:e=>T.ink.move(e),up:e=>T.ink.up(e),cancel:()=>T.ink.cancel()});
   const lay=()=>{const vw=vp.clientWidth,vh=vp.clientHeight,yan=OPT.yan!==false&&vw>=860&&vw>vh*1.15;page.classList.toggle('yan',yan);page.style.width=vw+'px';
     const colW=yan?vw*.46:vw,qi=page.querySelector('.qimg');if(qi){const pw=q.pw||Math.min(1,(q.w||900)/1700);qi.style.width=Math.min(colW-32,Math.max(240,pw*Math.max(Math.min(yan?colW*1.5:colW,780),620)))+'px';const qc=qi.parentNode;qc.style.width=qi.style.width}
     const im=page.querySelector('.qwrap');const ch=im?im.offsetHeight:300;$('#scr').style.height=yan?Math.max(vh,ch)+'px':Math.max(vh*.85,ch*.9,360)+'px';T.ink.resize();T.g.fix()};
@@ -935,7 +951,7 @@ let VOICE=null;function pickV(){try{VOICE=speechSynthesis.getVoices().find(v=>/^
 try{speechSynthesis.onvoiceschanged=pickV}catch(e){}pickV();
 let SES=LS.get('sh2-ses',true);
 function hush(){try{speechSynthesis.cancel()}catch(e){}}
-function say(t,rate){return new Promise(res=>{if(!SES||!('speechSynthesis' in window))return res(false);try{hush();const u=new SpeechSynthesisUtterance(t);if(VOICE)u.voice=VOICE;u.lang=VOICE?VOICE.lang:'tr-TR';u.rate=rate||1;let st=false;u.onstart=()=>st=true;u.onend=()=>res(true);u.onerror=()=>res(false);speechSynthesis.speak(u);setTimeout(()=>{if(!st&&!speechSynthesis.speaking)res(false)},3000)}catch(e){res(false)}})}
+function say(t,rate){return new Promise(res=>{if(!SES||!('speechSynthesis' in window))return res(false);try{hush();const u=new SpeechSynthesisUtterance(String(mt(t)).replace(/(\d*)√\(([^)]*)\)/g,'$1 kök içinde $2 ').replace(/(\d*)√(\w+)/g,'$1 kök $2 ').replace(/²/g,' kare').replace(/³/g,' küp').replace(/°/g,' derece').replace(/·|×/g,' çarpı ').replace(/\//g,' bölü '));if(VOICE)u.voice=VOICE;u.lang=VOICE?VOICE.lang:'tr-TR';u.rate=rate||1;let st=false;u.onstart=()=>st=true;u.onend=()=>res(true);u.onerror=()=>res(false);speechSynthesis.speak(u);setTimeout(()=>{if(!st&&!speechSynthesis.speaking)res(false)},3000)}catch(e){res(false)}})}
 async function sesTest(out){
   if(!('speechSynthesis' in window)){out.textContent='Bu tarayıcı sesli okumayı desteklemiyor. Uygulamayı Chrome ile aç.';return}
   pickV();out.textContent='Ses deneniyor…';const prev=SES;SES=true;const ok=await say('Merhaba, ses çalışıyor. Hadi soru çözelim.');SES=prev;
@@ -1018,7 +1034,7 @@ Anlatım adımları: ${PL.A.map((a,n)=>(n+1)+') '+a.soz).join(' ')}
 Öğrenci şu an ${Math.min(PL.i+1,PL.A.length)}. adımda: "${st.soz}".
 ${istem||'Öğrencinin sorusu: "'+shown+'"'}
 Türkçe, düz metin, en fazla 4 kısa cümle. "Neden" sorularında kuralın mantığını açıkla. Markdown kullanma.`;
-  try{const parts=await qParts(q);const t=await gemini([...parts,{text:prompt}]);out.textContent=t;say(t)}catch(e){out.textContent=gErr(e)}
+  try{const parts=await qParts(q);const t=await gemini([...parts,{text:prompt}]);const tt=mt(t);out.textContent=tt;say(tt)}catch(e){out.textContent=gErr(e)}
 }
 
 /* ================= benzer soru ================= */
@@ -1030,7 +1046,7 @@ async function benzer(q){
     const y=await gemini([...parts,{text:`Bu bir TYT/AYT sorusu (${q.ders||''}${q.konu?', '+q.konu:''}). ${qBilgi(q)}
 Aynı kazanımı ölçen, aynı mantıkla çözülen ama sayıları/durumu değişmiş YENİ bir çoktan seçmeli soru yaz. Soru metinden tam anlaşılmalı; şekil gerekiyorsa şekli kısa ve açık bir cümleyle tarif et. Tek doğru cevabı olsun, çeldiriciler mantıklı olsun.
 Sadece JSON döndür: {"soru":"Türkçe soru metni","sekil":"şekil tarifi ya da null","secenekler":["5 şık metni, harfsiz"],"cevap":"A-E","cozum":"2-4 kısa cümle çözüm"}`}],true);
-    const o=Array.isArray(y.secenekler)?y.secenekler.slice(0,5).map(s=>String(s)):[],ci=LET.indexOf(String(y.cevap||'').trim().toUpperCase()[0]);
+    y.soru=mt(y.soru);y.sekil=mt(y.sekil);y.cozum=mt(y.cozum);const o=Array.isArray(y.secenekler)?y.secenekler.slice(0,5).map(s=>mt(String(s))):[],ci=LET.indexOf(String(y.cevap||'').trim().toUpperCase()[0]);
     if(!y.soru||o.length<5||ci<0)throw{code:'err'};
     if(!box.isConnected)return;
     box.innerHTML=`<p class="stem"></p>${y.sekil?'<p class="sek"></p>':''}<div class="opts2">${o.map((t,i)=>`<button data-i="${i}"><b>${LET[i]})</b><span></span></button>`).join('')}</div><div id="bqr"></div>`;
