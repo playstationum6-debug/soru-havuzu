@@ -162,6 +162,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 .pbpad{height:180px;border:2px dashed var(--line);border-radius:14px;touch-action:none;background:var(--grid)}
 .pbraw{margin:0;font:600 11px ui-monospace,monospace;color:var(--mute);word-break:break-all}
 .seg.shp{flex-wrap:wrap}
+.qyz{max-width:680px;width:100%;padding:4px 2px}
+.qtyped p{margin:0 0 12px;font:500 18px/1.55 var(--body);color:#0A0F3C}.qtyped p.qb{font-weight:800}
+.qfig{display:block;margin:6px auto 14px;max-width:100%;height:auto}
+.aslbtn{justify-self:start;align-self:start;width:max-content;margin-top:12px;border:2px solid #2742F5;color:#2742F5;background:#fff;border-radius:10px;padding:6px 10px;font:800 13px var(--body);cursor:pointer}
 .libseg{background:var(--card);box-shadow:0 3px 0 var(--ink)}.libseg button{padding:11px 6px}
 .chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
 .chip{flex:none;display:flex;align-items:center;gap:6px;border:2px solid var(--ink);border-radius:99px;padding:6px 12px;background:var(--field);font-weight:800;cursor:pointer;color:var(--ink)}
@@ -572,7 +576,7 @@ class Gest{
     vp.addEventListener('pointerdown',e=>this.down(e));vp.addEventListener('pointermove',e=>this.move(e));['pointerup','pointercancel','lostpointercapture'].forEach(n=>vp.addEventListener(n,e=>this.up(e)));
     vp.addEventListener('wheel',e=>{e.preventDefault();if(e.ctrlKey){const r=vp.getBoundingClientRect();this.zoomAt(this.s*Math.exp(-e.deltaY*.01),e.clientX-r.left,e.clientY-r.top)}else{this.tx-=e.deltaX;this.ty-=e.deltaY;this.fix()}},{passive:false});}
   zoomAt(s,cx,cy){s=Math.min(5,Math.max(1,s));this.tx=cx-(cx-this.tx)*s/this.s;this.ty=cy-(cy-this.ty)*s/this.s;this.s=s;this.fix()}
-  down(e){if(e.target.closest&&e.target.closest('.txin,.selbar'))return;try{this.vp.setPointerCapture(e.pointerId)}catch(_){}
+  down(e){if(e.target.closest&&e.target.closest('.txin,.selbar,.aslbtn'))return;try{this.vp.setPointerCapture(e.pointerId)}catch(_){}
     if(e.pointerType==='touch'){if(![...this.P.values()].some(p=>p.t==='touch'))this.tg={t0:e.timeStamp,max:0,mv:0,ok:true}}else if(this.tg)this.tg.ok=false;
     this.P.set(e.pointerId,{x:e.clientX,y:e.clientY,t:e.pointerType});if(this.tg&&e.pointerType==='touch')this.tg.max=Math.max(this.tg.max,[...this.P.values()].filter(p=>p.t==='touch').length);
     const T=[...this.P.entries()].filter(([,p])=>p.t==='touch');
@@ -951,8 +955,12 @@ function startTest(ids,mode){T={ids,i:0,res:[],t0:now(),streak:0,maxSeri:0,mode:
 function qHTML(q){
   const opts=Array.isArray(q.o)&&q.o.length===5&&q.o.some(Boolean)?`<div class="qopts">${q.o.map((t,i)=>`<span><b>${LET[i]})</b>${esc(t)}</span>`).join('')}</div>`:'';
   if(q.tip==='html')return `<div class="qwrap"><div class="qcol" style="max-width:640px;width:100%">${q.html}${opts}</div></div>`;
-  return `<div class="qwrap"><div class="qcol"><img class="qimg" alt="Soru" data-src="${esc(q.img)}" width="${q.w||600}" height="${q.h||400}">${opts}</div></div>`;
+  const img=`<img class="qimg" alt="Soru" data-src="${esc(q.img)}" width="${q.w||600}" height="${q.h||400}">`;
+  if(Array.isArray(q.yazi)&&q.yazi.length&&OPT.yazi!==false){const y=q.yazi.map(b=>b.t==='s'?`<img class="qfig" alt="Şekil" data-src="${esc(b.img)}" width="${b.w||400}" height="${b.h||200}" style="width:${Math.round(Math.max(.35,Math.min(1,(b.fw||.6)*1.15))*100)}%">`:`<p${b.t==='b'?' class="qb"':''}>${esc(b.s)}</p>`).join('');
+    return `<div class="qwrap"><div class="qcol qyz"><div class="qtyped">${y}</div><div class="qorig" hidden>${img}</div>${opts}<button class="aslbtn" type="button">📷 Aslını gör</button></div></div>`}
+  return `<div class="qwrap"><div class="qcol">${img}${opts}</div></div>`;
 }
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.aslbtn');if(!b)return;const c=b.closest('.qcol'),t=c.querySelector('.qtyped'),o=c.querySelector('.qorig'),as=t.hidden;t.hidden=!as;o.hidden=as;b.textContent=as?'📷 Aslını gör':'✍️ Yazılı hali';if(typeof T!=='undefined'&&T&&T.ink&&c.closest('#page'))setTimeout(()=>T.ink.resize(),30)});
 async function openQ(){
   saveInk();
   const q=allQ().find(x=>x.id===T.ids[T.i]);if(!q){T.i++;return T.i<T.ids.length?openQ():result()}
@@ -970,7 +978,7 @@ async function openQ(){
   T.ink=new Ink(page);
   T.g=new Gest(vp,page,{canDraw:e=>{if(e.pointerType==='pen'&&!penSeen){penSeen=true;LS.set('sh-pen',true);toast('Kalem algılandı: kalemle yaz, parmakla kaydır.')}if(penEr(e))return true;if(tool==='hand')return false;if(e.pointerType==='pen')return true;if(e.pointerType==='touch'&&penSeen&&!OPT.fingerDraw)return false;return true},down:e=>T.ink.down(e),move:e=>T.ink.move(e),up:e=>T.ink.up(e),cancel:()=>T.ink.cancel(),tap:n=>{if(n===2){T.ink.undo();toast('↶ Geri alındı')}else{T.ink.redo();toast('↷ Yinelendi')}},moved:()=>{if(T.ink&&T.ink.sel)T.ink.placeBar()}});
   const lay=()=>{const vw=vp.clientWidth,vh=vp.clientHeight,yan=OPT.yan!==false&&vw>=860&&vw>vh*1.15;page.classList.toggle('yan',yan);page.style.width=vw+'px';
-    const colW=yan?vw*.46:vw,qi=page.querySelector('.qimg');if(qi){const pw=q.pw||Math.min(1,(q.w||900)/1700);qi.style.width=Math.min(colW-32,Math.max(240,pw*Math.max(Math.min(yan?colW*1.5:colW,780),620)))+'px';const qc=qi.parentNode;qc.style.width=qi.style.width}
+    const colW=yan?vw*.46:vw,qi=page.querySelector('.qimg');if(qi){const pw=q.pw||Math.min(1,(q.w||900)/1700);qi.style.width=Math.min(colW-32,Math.max(240,pw*Math.max(Math.min(yan?colW*1.5:colW,780),620)))+'px';const qc=qi.parentNode;qc.style.width=qi.style.width}const qz=page.querySelector('.qyz');if(qz)qz.style.width=Math.min(colW-32,680)+'px';
     const im=page.querySelector('.qwrap');const ch=im?im.offsetHeight:300;$('#scr').style.height=yan?Math.max(vh,ch)+'px':Math.max(vh*.85,ch*.9,360)+'px';T.ink.resize();T.g.fix()};
   const img=page.querySelector('.qimg');if(img)img.addEventListener('load',()=>{if(T&&T.q===q)lay()},{once:true});
   lay();T.lay=lay;
