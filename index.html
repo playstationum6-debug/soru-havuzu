@@ -894,6 +894,7 @@ async function upload(f,sessiz,sadece,grupAd){
       const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer(),isEvalSupported:false}).promise;
       let kilit=null;try{kilit=await navigator.wakeLock.request('screen')}catch(e){}
       const sayfalar=sadece||[...Array(pdf.numPages)].map((_,i)=>i+1),eksik=[];
+      if(!sadece){try{durumYaz('Video linkleri aranıyor…');const LK=await pdfLinkleri(pdf);if(LK.length)await putTekrar(`gelen_link/${grupAd||st+'-'+ad}.json`,b64e(JSON.stringify(LK)),'video linkleri: '+ad)}catch(e){}}
       card.insertAdjacentHTML('beforeend','<small>Yükleme bitene kadar uygulamadan çıkma.</small>');
       for(const n of sayfalar){
         durumYaz(`Sayfa ${n}/${pdf.numPages} yükleniyor…`);
@@ -924,17 +925,18 @@ const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a
 function setup(pre,mode,konuPre){
   const Q=allQ(),ders=[...new Set(Q.map(q=>q.ders))];
   if(!Q.length){toast('Havuz boş. Önce soru ekle.');return}
-  const sel=new Set(pre?[pre]:ders);let konu=konuPre||'',n=mode==='deneme'?20:pref.n,ord=pref.ord,only=pref.only,md=mode||'normal';
+  const sel=new Set(pre?[pre]:ders);let konu=konuPre||'',n=mode==='deneme'?20:pref.n,ord=pref.ord,only=pref.only,coz=!!pref.coz,md=mode||'normal';
   sheet(`<h3>${md==='deneme'?'Deneme modu':'Test başlat'}</h3>
   <div class="seg" id="sM"><button data-m="normal" aria-pressed="${md==='normal'}">Anında geri bildirim</button><button data-m="deneme" aria-pressed="${md==='deneme'}">Deneme (süreli)</button></div>
   <div class="fld"><span class="lab">Dersler</span><div class="chips" id="sD">${ders.map(d=>`<button class="chip" data-d="${esc(d)}" aria-pressed="${sel.has(d)}">${esc(d)}</button>`).join('')}</div></div>
   <div class="fld"><span class="lab">Konu</span><select class="inp" id="sK"></select></div>
   <div class="fld"><span class="lab">Soru sayısı</span><div class="chips" id="sN">${[10,20,40,0].map(v=>`<button class="chip" data-n="${v}" aria-pressed="${v===n}">${v||'Hepsi'}</button>`).join('')}</div></div>
   <div class="fld"><span class="lab">Sıra</span><div class="seg" id="sO"><button data-o="rep" aria-pressed="${ord==='rep'}">Önce tekrarlar</button><button data-o="mix" aria-pressed="${ord==='mix'}">Karışık</button></div></div>
+  <div class="tg"><span>Sadece çözdüklerim (tekrar çöz)</span><button class="sw2" id="sC" role="switch" aria-checked="${!!pref.coz}" aria-label="Sadece çözdüklerim"></button></div>
   <div class="tg"><span>Sadece yanlış yaptıklarım</span><button class="sw2" id="sY" role="switch" aria-checked="${only}" aria-label="Sadece yanlışlar"></button></div>
   <p class="lab" id="sInfo" style="margin:0"></p>
   <button class="btn pink" id="sGo">Başla ▸</button>`,(el,close)=>{
-    const L=()=>Q.filter(q=>sel.has(q.ders)&&(!konu||q.konu===konu)&&(!only||q.last==='bad'));
+    const L=()=>Q.filter(q=>sel.has(q.ders)&&(!konu||q.konu===konu)&&(!only||q.last==='bad')&&(!coz||q.seen));
     const info=()=>{const c=L().length,k=n?Math.min(n,c):c;$('#sInfo',el).textContent=md==='deneme'?`${k} soru · ${Math.ceil(k*1.5)} dakika`:`${k} soru`};
     const fillK=()=>{const ks=[...new Set(Q.filter(q=>sel.has(q.ders)).map(q=>q.konu).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'tr'));$('#sK',el).innerHTML=`<option value="">Tüm konular</option>`+ks.map(k=>`<option ${k===konu?'selected':''}>${esc(k)}</option>`).join('');info()};fillK();
     $('#sK',el).onchange=e=>{konu=e.target.value;info()};
@@ -943,10 +945,11 @@ function setup(pre,mode,konuPre){
     el.querySelectorAll('#sN .chip').forEach(b=>b.onclick=()=>{n=+b.dataset.n;el.querySelectorAll('#sN .chip').forEach(x=>x.setAttribute('aria-pressed',x===b));info()});
     el.querySelectorAll('#sO button').forEach(b=>b.onclick=()=>{ord=b.dataset.o;el.querySelectorAll('#sO button').forEach(x=>x.setAttribute('aria-pressed',x===b))});
     $('#sY',el).onclick=e=>{only=!only;e.currentTarget.setAttribute('aria-checked',only);info()};
+    $('#sC',el).onclick=e=>{coz=!coz;e.currentTarget.setAttribute('aria-checked',coz);info()};
     $('#sGo',el).onclick=()=>{
       let A=L();if(!A.length){toast('Bu seçimde soru yok.');return}
       if(ord==='rep'){const d=shuffle(A.filter(isDue)).sort((a,b)=>a.due-b.due),nw=shuffle(A.filter(q=>!q.seen)),rest=A.filter(q=>q.seen&&!isDue(q)).sort((a,b)=>a.due-b.due);A=[...d,...nw,...rest]}else shuffle(A);
-      if(n)A=A.slice(0,n);pref={n:md==='deneme'?pref.n:n,ord,only};LS.set('sh-pref',pref);close();startTest(A.map(q=>q.id),md);
+      if(n)A=A.slice(0,n);pref={n:md==='deneme'?pref.n:n,ord,only,coz};LS.set('sh-pref',pref);close();startTest(A.map(q=>q.id),md);
     };
   });
 }
@@ -1015,7 +1018,7 @@ function record(q,k,ms){
 }
 function finish(k){
   if(T.done)return;T.done=true;const q=T.q;
-  const btns=document.querySelectorAll('.ab[data-k]');const R=record(q,k,now()-T.qs);T.res.push(R);
+  const btns=document.querySelectorAll('.ab[data-k]');const R=record(q,k,now()-T.qs);if(T.tekrar===q.id){T.res=T.res.filter(r=>r.id!==q.id);T.tekrar=null}T.res.push(R);
   if(q.ans!=null&&btns[q.ans])btns[q.ans].classList.add('ok');if(!R.blank&&!R.ok)btns[k].classList.add('bad');
   if(R.ok){T.streak++;T.maxSeri=Math.max(T.maxSeri,T.streak);burst(btns[k]);addXP(10+Math.min(10,(T.streak-1)*2)-(T.usedHint?4:0),btns[k])}else{T.streak=0;addXP(2)}
   const st=$('#stk');if(st){st.textContent='Seri '+T.streak;if(R.ok){st.classList.remove('pop');void st.offsetWidth;st.classList.add('pop')}}
@@ -1025,8 +1028,8 @@ function finish(k){
   const exp=ce?`${q.tip==='img'?`<p class="lab" style="margin:0">Zekanın çözümü${cl!=null&&cl!==q.ans?` · zeka ${LET[cl]} buldu`:''}</p>`:''}<p>${esc(ce)}</p>`:q.solve==='pending'?'<p>Bu sorunun çözümü hazırlanıyor, sonraki sefer görünecek.</p>':'';
   const aiNote=q.src==='ai'&&(PR.q[q.id]||{}).ans===undefined?`<p style="font-size:13px;font-weight:700;margin:0">Bu sorunun cevabını zeka buldu, yanlış olabilir. <button class="btn ghost sm" id="fixA">Cevabı düzelt</button></p>`:'';
   const nt=q.not||q.note?`<div class="stick"><small>Notun</small>${esc(q.not||q.note)}</div>`:'';
-  $('#abar').insertAdjacentHTML('afterbegin',`<div class="fb ${R.blank?'blank':R.ok?'ok':'bad'}"><h3>${R.blank?'Boş bıraktın · cevap '+LET[q.ans]:R.ok?(T.streak>=3?`Doğru! ${T.streak} seri`:'Doğru!'):'Yanlış · cevap '+LET[q.ans]}</h3>${exp}${nt}${aiNote}<div class="watch"><button class="btn sm" id="wA">▶ Anlatımı izle</button><button class="btn pink sm" id="wV">🎬 Video</button><button class="btn ghost sm" id="wG">🎥 Gerçek video</button><button class="btn ghost sm" id="wB">Benzer soru üret</button></div><p style="font-size:13px;color:var(--mute)">Bu soru ${days} gün sonra tekrar gelecek.</p></div>`);
-  $('#wA').onclick=()=>anlat(allQ().find(x=>x.id===q.id)||q);$('#wV').onclick=()=>videoAc(q);$('#wG').onclick=()=>gercekAc(q);$('#wB').onclick=()=>benzer(q);
+  $('#abar').insertAdjacentHTML('afterbegin',`<div class="fb ${R.blank?'blank':R.ok?'ok':'bad'}"><h3>${R.blank?'Boş bıraktın · cevap '+LET[q.ans]:R.ok?(T.streak>=3?`Doğru! ${T.streak} seri`:'Doğru!'):'Yanlış · cevap '+LET[q.ans]}</h3>${exp}${nt}${aiNote}<div class="watch"><button class="btn sm" id="wA">▶ Anlatımı izle</button><button class="btn pink sm" id="wV">🎬 Video</button><button class="btn ghost sm" id="wG">🎥 Gerçek video</button><button class="btn ghost sm" id="wT">🔁 Tekrar çöz</button><button class="btn ghost sm" id="wB">Benzer soru üret</button></div><p style="font-size:13px;color:var(--mute)">Bu soru ${days} gün sonra tekrar gelecek.</p></div>`);
+  $('#wA').onclick=()=>anlat(allQ().find(x=>x.id===q.id)||q);$('#wV').onclick=()=>videoAc(q);$('#wG').onclick=()=>gercekAc(q);$('#wT').onclick=()=>{saveInk();T.tekrar=q.id;T.usedHint=false;openQ();toast('Temiz sayfa · eski çizimin ⋯ menüsünde')};$('#wB').onclick=()=>benzer(q);
   if($('#fixA'))$('#fixA').onclick=()=>sheet(`<h3>Doğru cevap hangisi?</h3><div class="ansrow">${[...LET].map((l,i)=>`<button class="chip" data-a="${i}" aria-pressed="${q.ans===i}">${l}</button>`).join('')}<span></span></div>`,(el,close)=>el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{setP(q.id,{ans:+b.dataset.a});close();toast('Cevap kaydedildi.')}));
   const ab=$('.abtns');ab.innerHTML=`<button class="btn" id="nx" style="grid-column:1/-1">${last?'Sonucu gör':'Sonraki soru'} ▸</button>`;ab.style.gridTemplateColumns='1fr';
   $('#nx').onclick=()=>{if(last)result();else{T.i++;T.usedHint=false;openQ()}};
@@ -1060,6 +1063,13 @@ function result(den){
 function reviewOne(id){const q=allQ().find(x=>x.id===id);if(!q)return;sheet(`<h3>${esc(q.konu||q.ders)}</h3><div class="prev" style="background:#fff">${qHTML(q)}</div><p style="margin:0;font-weight:800">Doğru cevap: ${q.ans!=null?LET[q.ans]:'?'}</p>${q.cozum?`<p style="margin:0;font-weight:600">${esc(q.cozum)}</p>`:''}<div class="watch"><button class="btn sm" id="rA">▶ Anlatımı izle</button><button class="btn pink sm" id="rV">🎬 Video</button><button class="btn ghost sm" id="rB">Benzer soru üret</button></div>`,(el,close)=>{fillImgs(el);$('#rA',el).onclick=()=>{close();anlat(q)};$('#rV',el).onclick=()=>{close();videoAc(q)};$('#rB',el).onclick=()=>{close();benzer(q)}})}
 
 /* ================= konu haritası ================= */
+async function pdfLinkleri(pdf){const out=[],re=/(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/[^\s)\]"'<>]+|youtu\.be\/[^\s)\]"'<>]+)/gi;
+  for(let i=1;i<=pdf.numPages;i++){try{const p=await pdf.getPage(i),tc=await p.getTextContent(),satir={};
+    tc.items.forEach(t=>{const y=Math.round(t.transform[5]/4);satir[y]=(satir[y]||'')+t.str+' '});
+    Object.values(satir).forEach(l=>(l.match(re)||[]).forEach(u=>out.push({url:u,yazi:l.trim().slice(0,200),sayfa:i})));
+    (await p.getAnnotations()).forEach(a=>{const u=a.url||a.unsafeUrl||'';if(/youtu/i.test(u)){const y=a.rect?Math.round(((a.rect[1]+a.rect[3])/2)/4):null;out.push({url:u,yazi:(y!=null&&(satir[y]||satir[y-1]||satir[y+1]))||'',sayfa:i})}
+      const c=a.contentsObj&&a.contentsObj.str||a.contents||'';(String(c).match(re)||[]).forEach(u=>out.push({url:u,yazi:String(c).slice(0,200),sayfa:i}))})}catch(e){}}
+  return out}
 /* ================= gerçek çözüm videosu (YouTube): QR, zeka araması, kullanıcı linki ================= */
 function ytCoz(t){t=String(t||'').trim();const m=t.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/)||t.match(/^([A-Za-z0-9_-]{11})$/);if(!m)return null;
   let s=0;const tm=t.match(/[?&#]t=([0-9hms]+)/);if(tm){const x=tm[1];if(/^\d+$/.test(x))s=+x;else{const g=(r)=>{const k=x.match(new RegExp('(\\d+)'+r));return k?+k[1]:0};s=g('h')*3600+g('m')*60+g('s')}}return{v:m[1],s}}
@@ -1070,7 +1080,7 @@ async function gercekAc(q,bekliyor){const P=PR.q[q.id]||{},G=await gercekListe()
   if(P.gv&&g&&g.durum==='hazir'&&g.v&&P.gv.v&&g.v[0]===P.gv.v[0]&&g.s&&!P.gv.sElle)gv={...P.gv,s:g.s,bolum:g.bolum};
   const grp=k=>String(k||'').replace(/-s\d{3}\.jpe?g$/i,''),AQ=allQ(),ayniS=AQ.filter(x=>x.kaynak&&x.kaynak===q.kaynak&&x.sayfa===q.sayfa),ayniD=AQ.filter(x=>x.kaynak&&grp(x.kaynak)===grp(q.kaynak));
   const kotu=new Set(P.gvKotu||[]),vs=gv?(gv.v||[]).filter(v=>!kotu.has(v)):[];
-  const kay={qr:'Kitabın QR kodundan',ara:'Zeka YouTube’da buldu',sen:'Senin eklediğin video'}[gv&&gv.k]||'';
+  const kay={pdf:'PDF’teki linkten',qr:'Kitabın QR kodundan',ara:'Zeka YouTube’da buldu',sen:'Senin eklediğin video'}[gv&&gv.k]||'';
   const bek=bekliyor||(g&&g.durum==='bekliyor');
   const ekle=`<div class="gvf"><label class="lab">YouTube linki</label><input class="inp" id="gvL" placeholder="https://youtu.be/…" inputmode="url"><label class="lab">Başlangıç (dakika:saniye, isteğe bağlı)</label><input class="inp" id="gvS" placeholder="4:12" inputmode="numeric">
     ${ayniD.length>1?`<label class="lab">Hangi sorulara?</label><div class="seg" id="gvH"><button data-h="1" aria-pressed="false">Sadece bu</button>${ayniS.length>1?`<button data-h="s" aria-pressed="true">Bu sayfa (${ayniS.length})</button>`:''}<button data-h="d" aria-pressed="${ayniS.length>1?'false':'true'}">Bu dosya (${ayniD.length})</button></div><small style="color:var(--mute);font-weight:600">Test videosuysa zeka açıklamadaki “Soru 7 – 4:12” dakikalarını okuyup her soruyu kendi yerinden açar.</small>`:''}
