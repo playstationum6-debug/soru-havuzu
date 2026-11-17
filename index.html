@@ -1066,15 +1066,19 @@ function ytCoz(t){t=String(t||'').trim();const m=t.match(/(?:youtube(?:-nocookie
 function snCoz(t){t=String(t||'').trim();if(!t)return 0;if(/^\d+$/.test(t))return +t;const p=t.split(/[:.]/).map(Number);return p.length===2?p[0]*60+p[1]:p.length===3?p[0]*3600+p[1]*60+p[2]:0}
 async function gercekListe(){try{const r=await GH.raw('gercek/liste.json');return r?await r.json():{}}catch(e){return{}}}
 async function gercekAc(q,bekliyor){const P=PR.q[q.id]||{},G=await gercekListe(),g=G[q.id];
-  const gv=P.gv||(g&&g.durum==='hazir'?g:null)||(q.gv&&(q.gv.v||[]).length||q.gv&&q.gv.url?q.gv:null);
+  let gv=P.gv||(g&&g.durum==='hazir'?g:null)||(q.gv&&(q.gv.v||[]).length||q.gv&&q.gv.url?q.gv:null);
+  if(P.gv&&g&&g.durum==='hazir'&&g.v&&P.gv.v&&g.v[0]===P.gv.v[0]&&g.s&&!P.gv.sElle)gv={...P.gv,s:g.s,bolum:g.bolum};
+  const grp=k=>String(k||'').replace(/-s\d{3}\.jpe?g$/i,''),AQ=allQ(),ayniS=AQ.filter(x=>x.kaynak&&x.kaynak===q.kaynak&&x.sayfa===q.sayfa),ayniD=AQ.filter(x=>x.kaynak&&grp(x.kaynak)===grp(q.kaynak));
   const kotu=new Set(P.gvKotu||[]),vs=gv?(gv.v||[]).filter(v=>!kotu.has(v)):[];
   const kay={qr:'Kitabın QR kodundan',ara:'Zeka YouTube’da buldu',sen:'Senin eklediğin video'}[gv&&gv.k]||'';
   const bek=bekliyor||(g&&g.durum==='bekliyor');
-  const ekle=`<div class="gvf"><label class="lab">YouTube linki</label><input class="inp" id="gvL" placeholder="https://youtu.be/…" inputmode="url"><label class="lab">Başlangıç (dakika:saniye, isteğe bağlı)</label><input class="inp" id="gvS" placeholder="4:12" inputmode="numeric"><button class="btn sm" id="gvK">Kaydet</button></div>`;
+  const ekle=`<div class="gvf"><label class="lab">YouTube linki</label><input class="inp" id="gvL" placeholder="https://youtu.be/…" inputmode="url"><label class="lab">Başlangıç (dakika:saniye, isteğe bağlı)</label><input class="inp" id="gvS" placeholder="4:12" inputmode="numeric">
+    ${ayniD.length>1?`<label class="lab">Hangi sorulara?</label><div class="seg" id="gvH"><button data-h="1" aria-pressed="false">Sadece bu</button>${ayniS.length>1?`<button data-h="s" aria-pressed="true">Bu sayfa (${ayniS.length})</button>`:''}<button data-h="d" aria-pressed="${ayniS.length>1?'false':'true'}">Bu dosya (${ayniD.length})</button></div><small style="color:var(--mute);font-weight:600">Test videosuysa zeka açıklamadaki “Soru 7 – 4:12” dakikalarını okuyup her soruyu kendi yerinden açar.</small>`:''}
+    <button class="btn sm" id="gvK">Kaydet</button></div>`;
   let h;
   if(vs.length){const s0=gv.s||0;h=`<div class="ytw"><iframe id="ytF" src="https://www.youtube-nocookie.com/embed/${vs[0]}?start=${s0}&rel=0&playsinline=1&modestbranding=1" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="Çözüm videosu"></iframe></div>
     ${vs.length>1?`<div class="chips" style="margin-top:8px">${vs.map((v,i)=>`<button class="chip" data-yv="${v}" aria-pressed="${i===0}">Video ${i+1}</button>`).join('')}</div><small style="color:var(--mute);font-weight:600">Bu sayfanın QR’ında ${vs.length} video var; sorunun numarasına uyanı seç.</small>`:''}
-    <p style="margin:8px 0 0;font-size:13px;font-weight:700;color:var(--mute)">${esc(kay)}${gv.t?' · '+esc(gv.t):''}${gv.tur==='konu_videosu'?' · aynı soru bulunamadı, konu videosu':''}</p>
+    <p style="margin:8px 0 0;font-size:13px;font-weight:700;color:var(--mute)">${esc(kay)}${gv.t?' · '+esc(gv.t):''}${gv.s?` · ${Math.floor(gv.s/60)}:${String(gv.s%60).padStart(2,'0')}’dan başlar`:''}${gv.tur==='konu_videosu'?' · aynı soru bulunamadı, konu videosu':''}</p>
     <div class="row" style="margin-top:8px"><button class="btn ghost sm" id="gvX">👎 Yanlış video</button><button class="btn ghost sm" id="gvD">🔗 Başka link</button><a class="btn ghost sm" href="https://www.youtube.com/watch?v=${vs[0]}&t=${s0}s" target="_blank" rel="noopener">YouTube’da aç</a></div><div id="gvE" hidden>${ekle}</div>`}
   else if(gv&&gv.url)h=`<p style="font-weight:700">Kitabın QR kodu bir video sayfasına gidiyor.</p><a class="btn" href="${esc(gv.url)}" target="_blank" rel="noopener">Kitabın video sayfasını aç ↗</a><div class="row" style="margin-top:10px"><button class="btn ghost sm" id="gvA">🔎 Zeka YouTube’da bulsun</button></div>${ekle}`;
   else if(bek)h=`<div class="proc"><span class="beam"></span><b>Zeka YouTube’da arıyor…</b><small>Kitap, sayfa ve soru metniyle arıyor; 1–2 dakika sürer.</small></div>`;
@@ -1083,7 +1087,12 @@ async function gercekAc(q,bekliyor){const P=PR.q[q.id]||{},G=await gercekListe()
   const old=document.querySelector('.scrim.gv');if(old)old.remove();
   sheet(`<h3>🎥 Gerçek çözüm videosu</h3>${h}`,(el,close)=>{el.parentNode.classList.add('gv');
     el.querySelectorAll('[data-yv]').forEach(b=>b.onclick=()=>{$('#ytF',el).src=`https://www.youtube-nocookie.com/embed/${b.dataset.yv}?start=0&rel=0&playsinline=1&autoplay=1`;el.querySelectorAll('[data-yv]').forEach(x=>x.setAttribute('aria-pressed',x===b))});
-    const kay=$('#gvK',el);if(kay)kay.onclick=()=>{const y=ytCoz($('#gvL',el).value);if(!y){toast('Bu bir YouTube linki değil');return}const s=snCoz($('#gvS',el).value)||y.s;setP(q.id,{gv:{k:'sen',v:[y.v],s}});close();toast('Video eklendi ✓');gercekAc(q)};
+    let hk=ayniS.length>1?'s':'d';el.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{hk=b.dataset.h;el.querySelectorAll('[data-h]').forEach(x=>x.setAttribute('aria-pressed',x===b))});
+    const kay=$('#gvK',el);if(kay)kay.onclick=async()=>{const y=ytCoz($('#gvL',el).value);if(!y){toast('Bu bir YouTube linki değil');return}const el_=snCoz($('#gvS',el).value),s=el_||y.s;
+      const L=ayniD.length>1?(hk==='s'?ayniS:hk==='d'?ayniD:[q]):[q];
+      L.forEach(x=>{if(x.id===q.id)setP(x.id,{gv:{k:'sen',v:[y.v],s,sElle:!!el_}});else if(!(PR.q[x.id]||{}).gv)setP(x.id,{gv:{k:'sen',v:[y.v],s:0}})});
+      close();toast(L.length>1?`Video ${L.length} soruya eklendi ✓`:'Video eklendi ✓');gercekAc(q);
+      try{await GH.put('video_bul/l-'+q.id+'~'+Date.now().toString(36)+'.json',b64e(JSON.stringify({link:y.v,id:q.id,s,ids:L.map(x=>x.id)})),null,'video linki '+q.id)}catch(e){}};
     const d=$('#gvD',el);if(d)d.onclick=()=>{$('#gvE',el).hidden=false;d.remove()};
     const ara=async(haric)=>{try{await GH.put('video_bul/'+q.id+'~'+Date.now().toString(36)+'.json',b64e(JSON.stringify({id:q.id,haric,q:{kaynak:q.kaynak,sayfa:q.sayfa,n:q.n,ders:q.ders,konu:q.konu,html:q.html,yazi:q.yazi}})),null,'video ara '+q.id);close();gercekAc(q,true);
       const t0=Date.now(),iv=setInterval(async()=>{const L=await gercekListe(),r=L[q.id];if(r&&r.zaman*1000>t0-5000){clearInterval(iv);if(document.querySelector('.scrim.gv'))gercekAc(q);toast(r.durum==='hazir'?'Video bulundu 🎥':'Video bulunamadı')}else if(Date.now()-t0>240000)clearInterval(iv)},8000)}catch(e){toast(ghMsg(e))}};
