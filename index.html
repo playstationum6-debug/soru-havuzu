@@ -162,6 +162,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 .pbpad{height:180px;border:2px dashed var(--line);border-radius:14px;touch-action:none;background:var(--grid)}
 .pbraw{margin:0;font:600 11px ui-monospace,monospace;color:var(--mute);word-break:break-all}
 .seg.shp{flex-wrap:wrap}
+.ytw{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;border:2px solid var(--ink);background:#000}.ytw iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.gvf{display:grid;gap:6px;margin-top:10px}
 .qyz{max-width:680px;width:100%;padding:4px 2px}
 .qtyped p{margin:0 0 12px;font:500 18px/1.55 var(--body);color:#0A0F3C}.qtyped p.qb{font-weight:800}
 .qfig{display:block;margin:6px auto 14px;max-width:100%;height:auto}
@@ -1023,8 +1025,8 @@ function finish(k){
   const exp=ce?`${q.tip==='img'?`<p class="lab" style="margin:0">Zekanın çözümü${cl!=null&&cl!==q.ans?` · zeka ${LET[cl]} buldu`:''}</p>`:''}<p>${esc(ce)}</p>`:q.solve==='pending'?'<p>Bu sorunun çözümü hazırlanıyor, sonraki sefer görünecek.</p>':'';
   const aiNote=q.src==='ai'&&(PR.q[q.id]||{}).ans===undefined?`<p style="font-size:13px;font-weight:700;margin:0">Bu sorunun cevabını zeka buldu, yanlış olabilir. <button class="btn ghost sm" id="fixA">Cevabı düzelt</button></p>`:'';
   const nt=q.not||q.note?`<div class="stick"><small>Notun</small>${esc(q.not||q.note)}</div>`:'';
-  $('#abar').insertAdjacentHTML('afterbegin',`<div class="fb ${R.blank?'blank':R.ok?'ok':'bad'}"><h3>${R.blank?'Boş bıraktın · cevap '+LET[q.ans]:R.ok?(T.streak>=3?`Doğru! ${T.streak} seri`:'Doğru!'):'Yanlış · cevap '+LET[q.ans]}</h3>${exp}${nt}${aiNote}<div class="watch"><button class="btn sm" id="wA">▶ Anlatımı izle</button><button class="btn pink sm" id="wV">🎬 Video</button><button class="btn ghost sm" id="wB">Benzer soru üret</button></div><p style="font-size:13px;color:var(--mute)">Bu soru ${days} gün sonra tekrar gelecek.</p></div>`);
-  $('#wA').onclick=()=>anlat(allQ().find(x=>x.id===q.id)||q);$('#wV').onclick=()=>videoAc(q);$('#wB').onclick=()=>benzer(q);
+  $('#abar').insertAdjacentHTML('afterbegin',`<div class="fb ${R.blank?'blank':R.ok?'ok':'bad'}"><h3>${R.blank?'Boş bıraktın · cevap '+LET[q.ans]:R.ok?(T.streak>=3?`Doğru! ${T.streak} seri`:'Doğru!'):'Yanlış · cevap '+LET[q.ans]}</h3>${exp}${nt}${aiNote}<div class="watch"><button class="btn sm" id="wA">▶ Anlatımı izle</button><button class="btn pink sm" id="wV">🎬 Video</button><button class="btn ghost sm" id="wG">🎥 Gerçek video</button><button class="btn ghost sm" id="wB">Benzer soru üret</button></div><p style="font-size:13px;color:var(--mute)">Bu soru ${days} gün sonra tekrar gelecek.</p></div>`);
+  $('#wA').onclick=()=>anlat(allQ().find(x=>x.id===q.id)||q);$('#wV').onclick=()=>videoAc(q);$('#wG').onclick=()=>gercekAc(q);$('#wB').onclick=()=>benzer(q);
   if($('#fixA'))$('#fixA').onclick=()=>sheet(`<h3>Doğru cevap hangisi?</h3><div class="ansrow">${[...LET].map((l,i)=>`<button class="chip" data-a="${i}" aria-pressed="${q.ans===i}">${l}</button>`).join('')}<span></span></div>`,(el,close)=>el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{setP(q.id,{ans:+b.dataset.a});close();toast('Cevap kaydedildi.')}));
   const ab=$('.abtns');ab.innerHTML=`<button class="btn" id="nx" style="grid-column:1/-1">${last?'Sonucu gör':'Sonraki soru'} ▸</button>`;ab.style.gridTemplateColumns='1fr';
   $('#nx').onclick=()=>{if(last)result();else{T.i++;T.usedHint=false;openQ()}};
@@ -1058,6 +1060,36 @@ function result(den){
 function reviewOne(id){const q=allQ().find(x=>x.id===id);if(!q)return;sheet(`<h3>${esc(q.konu||q.ders)}</h3><div class="prev" style="background:#fff">${qHTML(q)}</div><p style="margin:0;font-weight:800">Doğru cevap: ${q.ans!=null?LET[q.ans]:'?'}</p>${q.cozum?`<p style="margin:0;font-weight:600">${esc(q.cozum)}</p>`:''}<div class="watch"><button class="btn sm" id="rA">▶ Anlatımı izle</button><button class="btn pink sm" id="rV">🎬 Video</button><button class="btn ghost sm" id="rB">Benzer soru üret</button></div>`,(el,close)=>{fillImgs(el);$('#rA',el).onclick=()=>{close();anlat(q)};$('#rV',el).onclick=()=>{close();videoAc(q)};$('#rB',el).onclick=()=>{close();benzer(q)}})}
 
 /* ================= konu haritası ================= */
+/* ================= gerçek çözüm videosu (YouTube): QR, zeka araması, kullanıcı linki ================= */
+function ytCoz(t){t=String(t||'').trim();const m=t.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/)||t.match(/^([A-Za-z0-9_-]{11})$/);if(!m)return null;
+  let s=0;const tm=t.match(/[?&#]t=([0-9hms]+)/);if(tm){const x=tm[1];if(/^\d+$/.test(x))s=+x;else{const g=(r)=>{const k=x.match(new RegExp('(\\d+)'+r));return k?+k[1]:0};s=g('h')*3600+g('m')*60+g('s')}}return{v:m[1],s}}
+function snCoz(t){t=String(t||'').trim();if(!t)return 0;if(/^\d+$/.test(t))return +t;const p=t.split(/[:.]/).map(Number);return p.length===2?p[0]*60+p[1]:p.length===3?p[0]*3600+p[1]*60+p[2]:0}
+async function gercekListe(){try{const r=await GH.raw('gercek/liste.json');return r?await r.json():{}}catch(e){return{}}}
+async function gercekAc(q,bekliyor){const P=PR.q[q.id]||{},G=await gercekListe(),g=G[q.id];
+  const gv=P.gv||(g&&g.durum==='hazir'?g:null)||(q.gv&&(q.gv.v||[]).length||q.gv&&q.gv.url?q.gv:null);
+  const kotu=new Set(P.gvKotu||[]),vs=gv?(gv.v||[]).filter(v=>!kotu.has(v)):[];
+  const kay={qr:'Kitabın QR kodundan',ara:'Zeka YouTube’da buldu',sen:'Senin eklediğin video'}[gv&&gv.k]||'';
+  const bek=bekliyor||(g&&g.durum==='bekliyor');
+  const ekle=`<div class="gvf"><label class="lab">YouTube linki</label><input class="inp" id="gvL" placeholder="https://youtu.be/…" inputmode="url"><label class="lab">Başlangıç (dakika:saniye, isteğe bağlı)</label><input class="inp" id="gvS" placeholder="4:12" inputmode="numeric"><button class="btn sm" id="gvK">Kaydet</button></div>`;
+  let h;
+  if(vs.length){const s0=gv.s||0;h=`<div class="ytw"><iframe id="ytF" src="https://www.youtube-nocookie.com/embed/${vs[0]}?start=${s0}&rel=0&playsinline=1&modestbranding=1" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="Çözüm videosu"></iframe></div>
+    ${vs.length>1?`<div class="chips" style="margin-top:8px">${vs.map((v,i)=>`<button class="chip" data-yv="${v}" aria-pressed="${i===0}">Video ${i+1}</button>`).join('')}</div><small style="color:var(--mute);font-weight:600">Bu sayfanın QR’ında ${vs.length} video var; sorunun numarasına uyanı seç.</small>`:''}
+    <p style="margin:8px 0 0;font-size:13px;font-weight:700;color:var(--mute)">${esc(kay)}${gv.t?' · '+esc(gv.t):''}${gv.tur==='konu_videosu'?' · aynı soru bulunamadı, konu videosu':''}</p>
+    <div class="row" style="margin-top:8px"><button class="btn ghost sm" id="gvX">👎 Yanlış video</button><button class="btn ghost sm" id="gvD">🔗 Başka link</button><a class="btn ghost sm" href="https://www.youtube.com/watch?v=${vs[0]}&t=${s0}s" target="_blank" rel="noopener">YouTube’da aç</a></div><div id="gvE" hidden>${ekle}</div>`}
+  else if(gv&&gv.url)h=`<p style="font-weight:700">Kitabın QR kodu bir video sayfasına gidiyor.</p><a class="btn" href="${esc(gv.url)}" target="_blank" rel="noopener">Kitabın video sayfasını aç ↗</a><div class="row" style="margin-top:10px"><button class="btn ghost sm" id="gvA">🔎 Zeka YouTube’da bulsun</button></div>${ekle}`;
+  else if(bek)h=`<div class="proc"><span class="beam"></span><b>Zeka YouTube’da arıyor…</b><small>Kitap, sayfa ve soru metniyle arıyor; 1–2 dakika sürer.</small></div>`;
+  else h=`${g&&g.durum==='bulunamadi'?'<p style="font-weight:700">Zeka bu soru için video bulamadı. Linki sen ekleyebilirsin.</p>':g&&g.durum==='kota'?'<p style="font-weight:700">Zekanın bugünkü hakkı doldu; yarın tekrar dene ya da linki sen ekle.</p>':'<p style="font-weight:700">Bu sorunun videosu henüz yok.</p>'}
+    <button class="btn" id="gvA">🔎 Zeka YouTube’da bulsun</button>${ekle}`;
+  const old=document.querySelector('.scrim.gv');if(old)old.remove();
+  sheet(`<h3>🎥 Gerçek çözüm videosu</h3>${h}`,(el,close)=>{el.parentNode.classList.add('gv');
+    el.querySelectorAll('[data-yv]').forEach(b=>b.onclick=()=>{$('#ytF',el).src=`https://www.youtube-nocookie.com/embed/${b.dataset.yv}?start=0&rel=0&playsinline=1&autoplay=1`;el.querySelectorAll('[data-yv]').forEach(x=>x.setAttribute('aria-pressed',x===b))});
+    const kay=$('#gvK',el);if(kay)kay.onclick=()=>{const y=ytCoz($('#gvL',el).value);if(!y){toast('Bu bir YouTube linki değil');return}const s=snCoz($('#gvS',el).value)||y.s;setP(q.id,{gv:{k:'sen',v:[y.v],s}});close();toast('Video eklendi ✓');gercekAc(q)};
+    const d=$('#gvD',el);if(d)d.onclick=()=>{$('#gvE',el).hidden=false;d.remove()};
+    const ara=async(haric)=>{try{await GH.put('video_bul/'+q.id+'~'+Date.now().toString(36)+'.json',b64e(JSON.stringify({id:q.id,haric,q:{kaynak:q.kaynak,sayfa:q.sayfa,n:q.n,ders:q.ders,konu:q.konu,html:q.html,yazi:q.yazi}})),null,'video ara '+q.id);close();gercekAc(q,true);
+      const t0=Date.now(),iv=setInterval(async()=>{const L=await gercekListe(),r=L[q.id];if(r&&r.zaman*1000>t0-5000){clearInterval(iv);if(document.querySelector('.scrim.gv'))gercekAc(q);toast(r.durum==='hazir'?'Video bulundu 🎥':'Video bulunamadı')}else if(Date.now()-t0>240000)clearInterval(iv)},8000)}catch(e){toast(ghMsg(e))}};
+    const a=$('#gvA',el);if(a)a.onclick=()=>ara([...kotu]);
+    const x=$('#gvX',el);if(x)x.onclick=()=>{const k=[...kotu,...vs.slice(0,1)];setP(q.id,{gvKotu:k,gv:null});ara(k)};
+  })}
 /* ================= kütüphane: taktikler, videolar, üretilen sorular ================= */
 let LIB={sek:LS.get('sh-libsek','tk'),ders:''};
 async function taktikListe(){try{const r=await GH.raw('taktik/liste.json');return r?await r.json():[]}catch(e){return[]}}
